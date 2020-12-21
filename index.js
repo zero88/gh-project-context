@@ -6,6 +6,7 @@ try {
   console.log(`Hello ${projectType}!`);
   const time = new Date().toTimeString();
   core.setOutput('time', time);
+  console.log(`${process.env.GITHUB_CONTEXT}`);
   // Get the JSON webhook payload for the event that triggered the workflow
   const payload = JSON.stringify(github.context, undefined, 2);
   console.log(`The event payload: ${payload}`);
