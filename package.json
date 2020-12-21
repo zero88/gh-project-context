@@ -2,14 +2,26 @@
   "name": "gh-project-context",
   "version": "1.0.0",
   "description": "Query and Update project context",
+  "author": "zero88",
   "main": "index.js",
   "scripts": {
+    "prepare": "ncc build index.js -o dist --source-map --license LICENSE",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "zero88",
+  "keywords": [
+    "GitHub",
+    "Actions",
+    "JavaScript"
+  ],
   "license": "Apache-2.0",
   "dependencies": {
     "@actions/core": "^1.2.6",
+    "@actions/exec": "^1.0.4",
+    "@actions/github": "^4.0.0",
     "semver": "^7.3.4"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.26.1",
+    "eslint": "^7.16.0"
   }
 }

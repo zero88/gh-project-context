@@ -1,0 +1,16 @@
+name: 'Project context'
+description: 'Query and update project context'
+inputs:
+  projectType:
+    description: 'Project type: [nodejs, python-pipenv, python-poetry, java-gradle, java-maven]'
+    required: true
+  defaultBranch:
+    description: 'Project default branch'
+    required: false
+    default: 'main'
+outputs:
+  time: # output will be available to future steps
+    description: 'The message to output'
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
