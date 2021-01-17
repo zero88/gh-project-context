@@ -9,6 +9,7 @@ try {
                                        core.getInput('releaseBranchPrefix', { required: true }),
                                        core.getInput('mergedReleaseMsgRegex', { required: true }));
   console.log(`Hello ${projectType}!`);
+  console.log(github);
   console.log(`The event payload: ${JSON.stringify(github.context, undefined, 2)}`);
   const ctxOut = new GitContextOps(ctxInput).parse();
   console.log(`Context output: ${JSON.stringify(ctxOut, undefined, 2)}`);
