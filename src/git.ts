@@ -28,7 +28,7 @@ export class GitContextInput {
   }
 }
 
-export class GitContextOutput {
+export interface GitContextOutput {
   /**
    * Current branch name or tag name
    */
@@ -54,10 +54,15 @@ export class GitContextOutput {
    */
   readonly isAfterMergedReleasePR: boolean;
   /**
+   * Check whether current event is merged PR
+   * @type {boolean}
+   */
+  readonly isMerged: boolean;
+  /**
    * Check whether current event is close PR but not merged into target branch
    * @type {boolean}
    */
-  readonly isCloseWithoutMerge: boolean;
+  readonly isClosed: boolean;
   /**
    * Check whether current event is on ref tag
    * @type {boolean}
@@ -78,22 +83,6 @@ export class GitContextOutput {
    * @type {string}
    */
   readonly commitId: string;
-
-  constructor(branch: string, onDefaultBranch: boolean, isPR: boolean, isReleasePR: boolean, isTag: boolean,
-              isAfterMergedReleasePR: boolean, commitMsg: string, commitId: string, version: string,
-              isClosedWithoutMerge: boolean) {
-    this.branch = branch;
-    this.onDefaultBranch = onDefaultBranch;
-    this.isPR = isPR;
-    this.isReleasePR = isReleasePR;
-    this.isCloseWithoutMerge = isClosedWithoutMerge;
-    this.isAfterMergedReleasePR = isAfterMergedReleasePR;
-    this.isTag = isTag;
-    this.version = version;
-    this.commitMsg = commitMsg;
-    this.commitId = commitId;
-  }
-
 }
 
 export class GitContextOps {
@@ -113,10 +102,12 @@ export class GitContextOps {
     const branch = this.parseBranch(context, isPR, isTag);
     const onDefaultBranch = this.checkDefBranch(event, context.ref);
     const isReleasePR = this.checkReleasePR(event, branch);
-    return new GitContextOutput(branch, onDefaultBranch, isPR, isReleasePR, isTag,
-                                this.checkAfterMergedReleasePR(event, onDefaultBranch, commitMsg), commitMsg,
-                                this.getCommitId(context, isPR), this.getVersion(branch, isReleasePR, isTag),
-                                this.checkClosedWithoutMerged(context, isPR));
+    return {
+      branch, onDefaultBranch, isPR, isReleasePR, isTag, commitMsg,
+      isAfterMergedReleasePR: this.checkAfterMergedReleasePR(event, onDefaultBranch, commitMsg),
+      commitId: this.getCommitId(context, isPR), version: this.getVersion(branch, isReleasePR, isTag),
+      isMerged: this.checkMerged(context, isPR), isClosed: this.checkClosed(context, isPR),
+    };
   }
 
   private parseBranch(context: Context, isPR: boolean, isTag: boolean): string {
@@ -158,11 +149,12 @@ export class GitContextOps {
     return '';
   }
 
-  private checkClosedWithoutMerged(context: Context, isPR: boolean) {
-    if (!isPR) {
-      return false;
-    }
-    return context.payload.action === 'closed' && context.payload.pull_request?.merged === false;
+  private checkMerged(context: Context, isPR: boolean) {
+    return isPR && context.payload.action === 'closed' && context.payload.pull_request?.merged === true;
+  }
+
+  private checkClosed(context: Context, isPR: boolean) {
+    return isPR && context.payload.action === 'closed' && context.payload.pull_request?.merged === false;
   }
 }
 

@@ -1,18 +1,18 @@
 import * as core from '@actions/core';
-import * as github from '@actions/github'
+import * as github from '@actions/github';
 import { GitContextInput, GitContextOps } from './git';
+import { parsePatterns } from './project';
 
 try {
-  const projectType = core.getInput('projectType', { required: true });
-  const ctxInput = new GitContextInput(core.getInput('defaultBranch', { required: true }),
-                                       core.getInput('tagPrefix', { required: true }),
-                                       core.getInput('releaseBranchPrefix', { required: true }),
-                                       core.getInput('mergedReleaseMsgRegex', { required: true }));
-  console.log(`Hello ${projectType}!`);
+  const ghInput = new GitContextInput(core.getInput('defaultBranch', { required: true }),
+                                      core.getInput('tagPrefix', { required: true }),
+                                      core.getInput('releaseBranchPrefix', { required: true }),
+                                      core.getInput('mergedReleaseMsgRegex', { required: true }));
+  const projectInput = parsePatterns(core.getInput('patterns', { required: true }));
   console.log(`The event payload: ${JSON.stringify(github.context, undefined, 2)}`);
-  const ctxOut = new GitContextOps(ctxInput).parse(github.context);
-  console.log(`Context output: ${JSON.stringify(ctxOut, undefined, 2)}`);
-  Object.keys(ctxOut).forEach(k => core.setOutput(k, ctxOut[k]));
+  const ghOutput = new GitContextOps(ghInput).parse(github.context);
+  console.log(`Context output: ${JSON.stringify(ghOutput, undefined, 2)}`);
+  Object.keys(ghOutput).forEach(k => core.setOutput(k, ghOutput[k]));
 } catch (error) {
   core.setFailed(error);
 }

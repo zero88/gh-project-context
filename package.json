@@ -18,6 +18,8 @@
     "@actions/core": "^1.2.6",
     "@actions/exec": "^1.0.4",
     "@actions/github": "^4.0.0",
+    "glob": "^7.1.6",
+    "mime": "^2.5.0",
     "semver": "^7.3.4"
   },
   "devDependencies": {

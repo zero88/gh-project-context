@@ -1,9 +1,6 @@
 name: 'Project context'
 description: 'Query and update project context'
 inputs:
-  projectType:
-    description: 'Project type: [nodejs, python-pipenv, python-poetry, java-gradle, java-maven]'
-    required: true
   defaultBranch:
     description: 'Project default branch'
     required: false
@@ -20,6 +17,9 @@ inputs:
     description: 'Merged release message regex'
     required: false
     default: '^Merge pull request #\d+ from .+/release/.+$'
+  patterns:
+    description: 'Project patterns to search/replace version. E.g: <file_path>::<version_path>::<file_ext>'
+    required: false
 outputs:
   branch:
     description: 'Current branch name or tag name'
@@ -29,6 +29,10 @@ outputs:
     description: 'Check whether current event is on pull request or not'
   isReleasePR:
     description: 'Check whether current event is on release pull request or not'
+  isMerged:
+    description: 'Check whether current event is merged PR'
+  isClosed:
+    description: 'Check whether current event is close PR but not merged into target branch'
   isAfterMergedReleasePR:
     description: 'Check whether current event is a merged commit after merged release pull request into default branch or not'
   isTag:
