@@ -9,11 +9,10 @@ try {
                                        core.getInput('releaseBranchPrefix', { required: true }),
                                        core.getInput('mergedReleaseMsgRegex', { required: true }));
   console.log(`Hello ${projectType}!`);
-  console.log(github);
   console.log(`The event payload: ${JSON.stringify(github.context, undefined, 2)}`);
-  const ctxOut = new GitContextOps(ctxInput).parse();
+  const ctxOut = new GitContextOps(ctxInput).parse(github.context);
   console.log(`Context output: ${JSON.stringify(ctxOut, undefined, 2)}`);
   Object.keys(ctxOut).forEach(k => core.setOutput(k, ctxOut[k]));
 } catch (error) {
-  core.setFailed(error.message);
+  core.setFailed(error);
 }

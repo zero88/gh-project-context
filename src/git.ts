@@ -1,4 +1,3 @@
-import github from '@actions/github';
 import { Context } from '@actions/github/lib/context';
 import { exec, ExecResult } from './exec';
 
@@ -98,8 +97,7 @@ export class GitContextOps {
     this.ctxInput = ctxInput;
   }
 
-  parse(): GitContextOutput {
-    const context = github.context;
+  parse(context: Context): GitContextOutput {
     const event = context.eventName;
     const commitMsg = context.payload.head_commit?.message;
     const isTag = this.checkTag(event, context.ref);
