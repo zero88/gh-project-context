@@ -54,6 +54,11 @@ export class GitContextOutput {
    */
   readonly isAfterMergedReleasePR: boolean;
   /**
+   * Check whether current event is close PR but not merged into target branch
+   * @type {boolean}
+   */
+  readonly isCloseWithoutMerge: boolean;
+  /**
    * Check whether current event is on ref tag
    * @type {boolean}
    */
@@ -75,11 +80,13 @@ export class GitContextOutput {
   readonly commitId: string;
 
   constructor(branch: string, onDefaultBranch: boolean, isPR: boolean, isReleasePR: boolean, isTag: boolean,
-              isAfterMergedReleasePR: boolean, commitMsg: string, commitId: string, version: string) {
+              isAfterMergedReleasePR: boolean, commitMsg: string, commitId: string, version: string,
+              isClosedWithoutMerge: boolean) {
     this.branch = branch;
     this.onDefaultBranch = onDefaultBranch;
     this.isPR = isPR;
     this.isReleasePR = isReleasePR;
+    this.isCloseWithoutMerge = isClosedWithoutMerge;
     this.isAfterMergedReleasePR = isAfterMergedReleasePR;
     this.isTag = isTag;
     this.version = version;
@@ -92,6 +99,7 @@ export class GitContextOutput {
 export class GitContextOps {
 
   readonly ctxInput: GitContextInput;
+  private;
 
   constructor(ctxInput: GitContextInput) {
     this.ctxInput = ctxInput;
@@ -107,7 +115,8 @@ export class GitContextOps {
     const isReleasePR = this.checkReleasePR(event, branch);
     return new GitContextOutput(branch, onDefaultBranch, isPR, isReleasePR, isTag,
                                 this.checkAfterMergedReleasePR(event, onDefaultBranch, commitMsg), commitMsg,
-                                this.getCommitId(context, isPR), this.getVersion(branch, isReleasePR, isTag));
+                                this.getCommitId(context, isPR), this.getVersion(branch, isReleasePR, isTag),
+                                this.checkClosedWithoutMerged(context, isPR));
   }
 
   private parseBranch(context: Context, isPR: boolean, isTag: boolean): string {
@@ -147,6 +156,13 @@ export class GitContextOps {
       return branch.replace(new RegExp(`^${this.ctxInput.releaseBranchPrefix}`), '');
     }
     return '';
+  }
+
+  private checkClosedWithoutMerged(context: Context, isPR: boolean) {
+    if (!isPR) {
+      return false;
+    }
+    return context.payload.action === 'closed' && context.payload.pull_request?.merged === false;
   }
 }
 
