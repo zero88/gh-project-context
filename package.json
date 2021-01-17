@@ -5,7 +5,7 @@
   "author": "zero88",
   "main": "index.js",
   "scripts": {
-    "prepare": "ncc build index.js -o dist --source-map --license LICENSE",
+    "build": "ncc build src/index.ts -o dist -m --source-map --license LICENSE",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -21,7 +21,9 @@
     "semver": "^7.3.4"
   },
   "devDependencies": {
+    "@types/node": "^14.14.14",
     "@vercel/ncc": "^0.26.1",
-    "eslint": "^7.16.0"
+    "eslint": "^7.16.0",
+    "typescript": "^4.1.3"
   }
 }
