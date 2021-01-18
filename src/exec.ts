@@ -1,3 +1,4 @@
+import * as core from '@actions/core';
 import * as aexec from '@actions/exec';
 import { ExecOptions } from '@actions/exec';
 
@@ -37,7 +38,8 @@ export const strictExec = async (command: string, args: string[] = [], silent?: 
                                  msgIfError?: string): Promise<ExecResult> => {
   return exec(command, args, silent).then(r => {
     if (!r.success) {
-      throw `${msgIfError}. Error: ${r.stderr ?? r.stdout}`;
+      core.warning(r.stdout);
+      throw `${msgIfError}. Error: ${r.stderr}`;
     }
     return r;
   });

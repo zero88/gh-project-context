@@ -293,6 +293,6 @@ export class GitInteractor {
   };
 
   private commitConfig(): string[] {
-    return ['-c', 'user.name', this.interactorInput.userName, '-c', 'user.email', this.interactorInput.userEmail];
+    return ['-c', `user.name=${this.interactorInput.userName}`, '-c', `user.email=${this.interactorInput.userEmail}`];
   };
 }
