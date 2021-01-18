@@ -1,7 +1,8 @@
 name: 'Project context'
-description: 'Query and update project context'
-icon: activity
-color: green
+description: 'Build project context and synchronize project version'
+branding:
+  icon: 'activity'  
+  color: 'green'
 inputs:
   defaultBranch:
     description: 'Project default branch'
