@@ -16,7 +16,7 @@ inputs:
   mergedReleaseMsgRegex:
     description: 'Merged release message regex'
     required: false
-    default: '^Merge pull request #\d+ from .+/release/.+$'
+    default: '^Merge pull request #[0-9]+ from .+/release/.+$'
   patterns:
     description: 'Project patterns to search/replace version. E.g: <glob_pattern_with_ext>::<regex_group>::<version_regex>'
     required: false

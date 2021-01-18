@@ -10,7 +10,7 @@ export class GitContextInput {
   static readonly DEFAULT_BRANCH = 'main';
   static readonly TAG_PREFIX = 'v';
   static readonly RELEASE_BRANCH_PREFIX = 'release/';
-  static readonly MERGED_RELEASE_MSG_REGEX = '^Merge pull request #\\d+ from .+/release/.+$';
+  static readonly MERGED_RELEASE_MSG_REGEX = '^Merge pull request #[0-9]+ from .+/release/.+$';
 
   /**
    * Default branch name
@@ -165,7 +165,7 @@ export class GitContextOps {
   }
 
   private checkAfterMergedReleasePR(event: string, onDefaultBranch: boolean, commitMsg: string): boolean {
-    return event === 'push' && onDefaultBranch && this.ctxInput.mergedReleaseMsgRegex.test(commitMsg);
+    return event === 'push' && onDefaultBranch && this.ctxInput.mergedReleaseMsgRegex.test(commitMsg?.trim());
   }
 
   private getCommitId(context: Context, isPR: boolean): string {
