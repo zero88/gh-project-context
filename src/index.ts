@@ -25,8 +25,9 @@ function doCIStep(versionResult: VersionResult, ghOutput: GitContextOutput, inte
     core.warning(`Need tag version ${ghOutput.version}`);
     return { ...ghOutput, ci: { needTag: true, mustFixVersion: false, isPushed: false } };
   }
-  return new GitInteractor(interactorInput).fixVersionThenCommitPush(ghOutput.version, versionResult, dryRun)
-                                           .then(ci => ({ ...ghOutput, ci: ci }));
+  const interactor = new GitInteractor(interactorInput);
+  return interactor.fixVersionThenCommitPush(ghOutput.branch, ghOutput.version, versionResult, dryRun)
+                   .then(ci => ({ ...ghOutput, ci: ci }));
 }
 
 function process(context: Context, ghInput: GitContextInput, interactorInput: GitInteractorInput,

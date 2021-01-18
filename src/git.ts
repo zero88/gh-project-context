@@ -264,18 +264,20 @@ export class GitInteractor {
     this.interactorInput = interactorInput;
   }
 
-  fixVersionThenCommitPush = async (version: string, versionResult: VersionResult,
+  fixVersionThenCommitPush = async (branch: string, version: string, versionResult: VersionResult,
                                     dryRun: boolean): Promise<CIContext> => {
     const committable = this.interactorInput.allowCommit && versionResult.isChanged && !dryRun;
     let commitMsg = '';
     let commitId = '';
     if (committable) {
       commitMsg = `${this.interactorInput.prefixCiMsg} ${this.interactorInput.correctVerMsg} ${version}`;
-      await strictExec('git', [...this.globalConfig(), 'commit', ...this.gpgSign(true), '-am', commitMsg], true,
+      await strictExec('git', ['fetch', '--depth=1'], 'Cannot fetch');
+      await strictExec('git', ['checkout', branch], 'Cannot checkout', false);
+      await strictExec('git', [...this.globalConfig(), 'commit', ...this.gpgSign(true), '-am', commitMsg],
                        `Cannot commit`);
-      await strictExec('git', ['show', '--shortstat', '--show-signature'], false, `Cannot show commit`);
-      await strictExec('git', ['push'], true, `Cannot push`);
-      commitId = (await strictExec('git', ['rev-parse', 'HEAD'], true, 'Cannot show last commit')).stdout;
+      await strictExec('git', ['show', '--shortstat', '--show-signature'], `Cannot show commit`, false);
+      await strictExec('git', ['push'], `Cannot push`, false);
+      commitId = (await strictExec('git', ['rev-parse', 'HEAD'], 'Cannot show last commit')).stdout;
     }
     return Promise.resolve({
                              mustFixVersion: versionResult.isChanged, needTag: false,
@@ -290,13 +292,11 @@ export class GitInteractor {
     let commitId = '';
     if (taggable) {
       commitMsg = `${this.interactorInput.releaseVerMsg} ${v}`;
-      commitId = (await strictExec('git', ['rev-parse', '--short', 'HEAD'], true, 'Cannot show last commit')).stdout;
-      await strictExec('git',
-                       [...this.globalConfig(), 'tag', ...this.gpgSign(false), '-a', '-m', `${commitMsg}`, v, commitId],
-                       true,
-                       `Cannot tag`);
-      await strictExec('git', ['show', '--shortstat', '--show-signature', v], false, `Cannot show tag`);
-      await strictExec('git', ['push', v], true, `Cannot push`);
+      commitId = (await strictExec('git', ['rev-parse', '--short', 'HEAD'], 'Cannot show last commit')).stdout;
+      await strictExec('git', [...this.globalConfig(), 'tag', ...this.gpgSign(false), '-a', '-m', `${commitMsg}`, v,
+                               commitId], `Cannot tag`);
+      await strictExec('git', ['show', '--shortstat', '--show-signature', v], `Cannot show tag`, false);
+      await strictExec('git', ['push', v], `Cannot push`, false);
     }
     return Promise.resolve({ mustFixVersion: false, needTag: needTag, isPushed: taggable, commitMsg, commitId });
   };

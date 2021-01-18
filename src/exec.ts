@@ -34,9 +34,9 @@ export const exec = async (command: string, args: string[] = [], silent?: boolea
   };
 };
 
-export const strictExec = async (command: string, args: string[] = [], silent?: boolean,
-                                 msgIfError?: string): Promise<ExecResult> => {
-  return exec(command, args, silent).then(r => {
+export const strictExec = async (command: string, args: string[], msgIfError: string,
+                                 silent: boolean = true): Promise<ExecResult> => {
+  return exec(command, args ?? [], silent).then(r => {
     if (!r.success) {
       core.warning(r.stdout);
       throw `${msgIfError}. Error: ${r.stderr}`;
