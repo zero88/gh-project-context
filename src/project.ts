@@ -63,7 +63,7 @@ export class ProjectContextOps {
 
   validateThenReplace(version: string, dryRun: boolean = true): Promise<boolean> {
     return Promise.all(this.inputs.map(input => this.replace(input, dryRun, version)))
-                  .then(result => result.reduce((p, c) => p.concat(c))
+                  .then(result => result.reduce((p, c) => p.concat(c), [])
                                         .filter(r => r.hasChanged))
                   .then(r => {
                     core.debug(`Has some files updated: ${JSON.stringify(r, null, 2)}`);

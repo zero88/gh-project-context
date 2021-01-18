@@ -9,6 +9,10 @@ describe('Parser', () => {
     expect(VersionParser.replace(next, current, pattern, inputs[0].group)).toEqual(expected);
   }
 
+  test('parse_empty', () => {
+    expect(ProjectContextOps.parse('').length).toEqual(0);
+  });
+
   test('parse_default', () => {
     const patterns = `./tests/**/project/*.json,./tests/**/project/*.properties
     ./tests/**/project/*.toml,./tests/**/project/*.txt
