@@ -22,6 +22,7 @@ function doCIStep(versionResult: VersionResult, ghOutput: GitContextOutput, inte
     return ghOutput;
   }
   if (ghOutput.isReleasePR && ghOutput.isMerged) {
+    core.warning(`Need tag version ${ghOutput.version}`);
     return { ...ghOutput, ci: { needTag: true, mustFixVersion: false, isPushed: false } };
   }
   return new GitInteractor(interactorInput).fixVersionThenCommitPush(ghOutput.version, versionResult, dryRun)
