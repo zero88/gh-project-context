@@ -51,7 +51,7 @@ function run(context: Context) {
                                                  getInputString('prefixCiMsg'),
                                                  getInputString('correctVerMsg'),
                                                  getInputString('releaseVerMsg'));
-  const patterns = getInputString('patterns');
+  const patterns = getInputString('patterns', false);
   const dryRun = getInputBool('dry');
   process(context, ghInput, interactorInput, patterns, dryRun).then(ghOutput => addActionOutputs(ghOutput))
                                                               .catch(error => core.setFailed(error));

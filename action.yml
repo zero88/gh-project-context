@@ -23,9 +23,11 @@ inputs:
   allowCommit:
     description: 'Allow commit to fix version if not match'
     required: false
+    default: 'true'
   allowTag:
     description: 'Allow tag in post script if merged release branch'
     required: false
+    default: 'true'
   prefixCiMsg:
     description: 'Prefix bot message'
     required: false
