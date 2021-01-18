@@ -28,8 +28,16 @@ inputs:
     description: 'Allow tag in post script if merged release branch'
     required: false
     default: 'true'
+  userName:
+    description: 'CI: User name to commit'
+    required: false
+    default: 'ci-bot'
+  userEmail:
+    description: 'CI: User email to commit'
+    required: false
+    default: 'actions@github.com'
   prefixCiMsg:
-    description: 'Prefix bot message'
+    description: 'CI: Prefix bot message'
     required: false
     default: <ci-auto-commit>
   correctVerMsg:

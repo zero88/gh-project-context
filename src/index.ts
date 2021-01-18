@@ -52,7 +52,9 @@ function run(context: Context) {
                                                  getInputBool('allowTag'),
                                                  getInputString('prefixCiMsg'),
                                                  getInputString('correctVerMsg'),
-                                                 getInputString('releaseVerMsg'));
+                                                 getInputString('releaseVerMsg'),
+                                                 getInputString('userName'),
+                                                 getInputString('userEmail'));
   const patterns = getInputString('patterns', false);
   const dryRun = getInputBool('dry');
   process(context, ghInput, interactorInput, patterns, dryRun).then(ghOutput => addActionOutputs(ghOutput))

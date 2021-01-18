@@ -224,14 +224,26 @@ export class GitInteractorInput {
    * @type {string}
    */
   readonly releaseVerMsg: string;
+  /**
+   * CI: User name to commit
+   * @type {string}
+   */
+  readonly userName: string;
+  /**
+   * CI: User email to commit
+   * @type {string}
+   */
+  readonly userEmail: string;
 
   constructor(allowCommit: boolean, allowTag: boolean, prefixCiMsg: string, correctVerMsg: string,
-              releaseVerMsg: string) {
+              releaseVerMsg: string, username: string, userEmail: string) {
     this.allowCommit = allowCommit ?? true;
     this.allowTag = allowTag ?? true;
     this.prefixCiMsg = prefixCiMsg ?? GitInteractorInput.PREFIX_CI_MSG;
     this.correctVerMsg = correctVerMsg ?? GitInteractorInput.CORRECT_VERSION_MSG;
     this.releaseVerMsg = releaseVerMsg ?? GitInteractorInput.RELEASE_VERSION_MSG;
+    this.userName = username ?? 'ci-bot';
+    this.userEmail = userEmail ?? 'actions@github.com';
   }
 }
 
@@ -253,7 +265,7 @@ export class GitInteractor {
     let commitId = '';
     if (committable) {
       commitMsg = `${this.interactorInput.prefixCiMsg} ${this.interactorInput.correctVerMsg} ${version}`;
-      await strictExec('git', ['commit', '-S', '-am', commitMsg], true, `Cannot commit`);
+      await strictExec('git', [...this.commitConfig(), 'commit', '-S', '-am', commitMsg], true, `Cannot commit`);
       await strictExec('git', ['show', '--shortstat', '--show-signature'], false, `Cannot show commit`);
       await strictExec('git', ['push'], true, `Cannot push`);
       commitId = (await strictExec('git', ['rev-parse', 'HEAD'], true, 'Cannot show last commit')).stdout;
@@ -272,10 +284,15 @@ export class GitInteractor {
     if (taggable) {
       commitMsg = `${this.interactorInput.releaseVerMsg} ${v}`;
       commitId = (await strictExec('git', ['rev-parse', '--short', 'HEAD'], true, 'Cannot show last commit')).stdout;
-      await strictExec('git', ['tag', '-as', '-m', `${commitMsg}`, v, commitId], true, `Cannot tag`);
+      await strictExec('git', [...this.commitConfig(), 'tag', '-as', '-m', `${commitMsg}`, v, commitId], true,
+                       `Cannot tag`);
       await strictExec('git', ['show', '--shortstat', '--show-signature', v], false, `Cannot show tag`);
       await strictExec('git', ['push', v], true, `Cannot push`);
     }
     return Promise.resolve({ mustFixVersion: false, needTag: needTag, isPushed: taggable, commitMsg, commitId });
+  };
+
+  private commitConfig(): string[] {
+    return ['-c', 'user.name', this.interactorInput.userName, '-c', 'user.email', this.interactorInput.userEmail];
   };
 }
