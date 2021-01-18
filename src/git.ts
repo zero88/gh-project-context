@@ -135,11 +135,14 @@ export class GitContextOps {
     const onDefaultBranch = this.checkDefBranch(event, context.ref);
     const isReleasePR = this.checkReleasePR(event, branch);
     const isManualOrSchedule = event === 'schedule' || event === 'workflow_dispatch' || event === 'repository_dispatch';
+    const isMerged = this.checkMerged(context, isPR);
+    const isClosed = this.checkClosed(context, isPR);
     return {
-      branch, onDefaultBranch, isPR, isReleasePR, isTag, commitMsg, isManualOrSchedule,
+      branch, onDefaultBranch, isPR, isReleasePR, isTag,
+      isManualOrSchedule, isMerged, isClosed, commitMsg,
+      version: this.getVersion(branch, isReleasePR, isTag),
+      commitId: this.getCommitId(context, isPR, !isMerged),
       isAfterMergedReleasePR: this.checkAfterMergedReleasePR(event, onDefaultBranch, commitMsg),
-      commitId: this.getCommitId(context, isPR), version: this.getVersion(branch, isReleasePR, isTag),
-      isMerged: this.checkMerged(context, isPR), isClosed: this.checkClosed(context, isPR),
     };
   }
 
@@ -168,8 +171,8 @@ export class GitContextOps {
     return event === 'push' && onDefaultBranch && this.ctxInput.mergedReleaseMsgRegex.test(commitMsg?.trim());
   }
 
-  private getCommitId(context: Context, isPR: boolean): string {
-    return isPR ? context.payload.pull_request?.head?.sha : context.sha;
+  private getCommitId(context: Context, isPR: boolean, isNotMerged: boolean): string {
+    return isPR && isNotMerged ? context.payload.pull_request?.head?.sha : context.sha;
   }
 
   private getVersion(branch: string, isReleasePR: boolean, isTag: boolean) {

@@ -15,19 +15,16 @@ function getInputString(inputName, required: boolean = true) {
 
 function doCIStep(versionResult: VersionResult, ghOutput: GitContextOutput, interactorInput: GitInteractorInput,
                   dryRun: boolean): GitContextOutput | Promise<GitContextOutput> {
-  if (ghOutput.isTag) {
-    if (versionResult.isChanged) {
-      throw `Git tag version doesn't meet with current version in files. Invalid files: [${versionResult.files}]`;
-    }
-    return ghOutput;
+  if (ghOutput.isTag && versionResult.isChanged) {
+    throw `Git tag version doesn't meet with current version in files. Invalid files: [${versionResult.files}]`;
   }
-  if (ghOutput.isClosed || ghOutput.isMerged) {
+  if (ghOutput.isTag || ghOutput.isAfterMergedReleasePR) {
     return ghOutput;
   }
   const interactor = new GitInteractor(interactorInput);
-  if (ghOutput.isAfterMergedReleasePR) {
+  if (ghOutput.isReleasePR && ghOutput.isMerged) {
     core.info(`Tag new version ${ghOutput.version}...`);
-    return interactor.tagThenPush(ghOutput.version, ghOutput.isAfterMergedReleasePR, dryRun)
+    return interactor.tagThenPush(ghOutput.version, ghOutput.isMerged, dryRun)
                      .then(ci => ({ ...ghOutput, ci: ci }));
   }
   core.info(`Fixing version ${ghOutput.version}...`);
