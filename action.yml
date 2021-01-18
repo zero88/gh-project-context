@@ -36,6 +36,10 @@ inputs:
     description: 'CI: User email to commit'
     required: false
     default: 'actions@github.com'
+  mustSign:
+    description: 'CI: Required GPG sign'
+    required: false
+    default: 'false'
   prefixCiMsg:
     description: 'CI: Prefix bot message'
     required: false

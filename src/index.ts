@@ -54,7 +54,8 @@ function run(context: Context) {
                                                  getInputString('correctVerMsg'),
                                                  getInputString('releaseVerMsg'),
                                                  getInputString('userName'),
-                                                 getInputString('userEmail'));
+                                                 getInputString('userEmail'),
+                                                 getInputBool('mustSign'));
   const patterns = getInputString('patterns', false);
   const dryRun = getInputBool('dry');
   process(context, ghInput, interactorInput, patterns, dryRun).then(ghOutput => addActionOutputs(ghOutput))
