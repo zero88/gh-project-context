@@ -69,6 +69,10 @@ export interface GitContextOutput {
    */
   readonly isTag: boolean;
   /**
+   * Check whether manual or schedule event
+   */
+  readonly isManualOrSchedule: boolean;
+  /**
    * Current tag version or release version. Null if not tag or release pull request
    * @type {string}
    */
@@ -83,7 +87,6 @@ export interface GitContextOutput {
    * @type {string}
    */
   readonly commitId: string;
-
   /**
    * CI context
    */
@@ -129,8 +132,9 @@ export class GitContextOps {
     const branch = this.parseBranch(context, isPR, isTag);
     const onDefaultBranch = this.checkDefBranch(event, context.ref);
     const isReleasePR = this.checkReleasePR(event, branch);
+    const isManualOrSchedule = event === 'schedule' || event === 'workflow_dispatch' || event === 'repository_dispatch';
     return {
-      branch, onDefaultBranch, isPR, isReleasePR, isTag, commitMsg,
+      branch, onDefaultBranch, isPR, isReleasePR, isTag, commitMsg, isManualOrSchedule,
       isAfterMergedReleasePR: this.checkAfterMergedReleasePR(event, onDefaultBranch, commitMsg),
       commitId: this.getCommitId(context, isPR), version: this.getVersion(branch, isReleasePR, isTag),
       isMerged: this.checkMerged(context, isPR), isClosed: this.checkClosed(context, isPR),
