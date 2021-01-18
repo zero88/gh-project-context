@@ -1,5 +1,6 @@
 import { Context } from '@actions/github/lib/context';
 import { strictExec } from './exec';
+import { VersionResult } from './project';
 
 /**
  * Declares Git context Input
@@ -245,8 +246,9 @@ export class GitInteractor {
     this.interactorInput = interactorInput;
   }
 
-  fixVersionThenCommitPush = async (version: string, hasChanged: boolean): Promise<CIContext> => {
-    const committable = this.interactorInput.allowCommit && hasChanged;
+  fixVersionThenCommitPush = async (version: string, versionResult: VersionResult,
+                                    dryRun: boolean): Promise<CIContext> => {
+    const committable = this.interactorInput.allowCommit && versionResult.isChanged && !dryRun;
     let commitMsg = '';
     let commitId = '';
     if (committable) {
@@ -256,13 +258,17 @@ export class GitInteractor {
       await strictExec('git', ['push'], true, `Cannot push`);
       commitId = (await strictExec('git', ['rev-parse', 'HEAD'], true, 'Cannot show last commit')).stdout;
     }
-    return Promise.resolve({ mustFixVersion: hasChanged, needTag: false, isPushed: committable, commitMsg, commitId });
+    return Promise.resolve({
+                             mustFixVersion: versionResult.isChanged, needTag: false,
+                             isPushed: committable, commitMsg, commitId,
+                           });
   };
 
-  tagThenPush = async (version: string, needTag: boolean, commitId?: string): Promise<CIContext> => {
-    const taggable = this.interactorInput.allowTag && needTag;
+  tagThenPush = async (version: string, needTag: boolean, dryRun: boolean): Promise<CIContext> => {
+    const taggable = this.interactorInput.allowTag && needTag && !dryRun;
     const v = `v${version}`;
     let commitMsg = '';
+    let commitId = '';
     if (taggable) {
       commitMsg = `${this.interactorInput.releaseVerMsg} ${v}`;
       commitId = (await strictExec('git', ['rev-parse', '--short', 'HEAD'], true, 'Cannot show last commit')).stdout;

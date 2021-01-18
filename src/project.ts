@@ -2,7 +2,7 @@ import * as core from '@actions/core';
 import { lstatSync } from 'fs';
 import * as glob from 'glob';
 import * as path from 'path';
-import { replaceInFile } from 'replace-in-file';
+import { replaceInFile, ReplaceResult } from 'replace-in-file';
 
 export interface ProjectContextInput {
   /**
@@ -61,22 +61,27 @@ export class ProjectContextOps {
     return glob.sync(pattern).filter(path => lstatSync(path).isFile());
   }
 
-  validateThenReplace(version: string, dryRun: boolean = true): Promise<boolean> {
+  validateThenReplace(version: string, dryRun: boolean = true): Promise<VersionResult> {
     return Promise.all(this.inputs.map(input => this.replace(input, dryRun, version)))
                   .then(result => result.reduce((p, c) => p.concat(c), [])
                                         .filter(r => r.hasChanged))
                   .then(r => {
-                    core.debug(`Has some files updated: ${JSON.stringify(r, null, 2)}`);
-                    return r.length > 0;
+                    core.debug(`Replace result: ${JSON.stringify(r, null, 2)}`);
+                    return { isChanged: r.length > 0, files: r.map(v => v.file) };
                   });
   };
 
-  private replace(input: ProjectContextInput, dryRun: boolean, version: string) {
+  private replace(input: ProjectContextInput, dryRun: boolean, version: string): Promise<ReplaceResult[]> {
     return replaceInFile({
                            files: input.files, dry: dryRun, from: input.pattern,
                            to: (match, _) => VersionParser.replace(version, match, input.pattern, input.group),
                          });
   }
+}
+
+export interface VersionResult {
+  readonly isChanged: boolean;
+  readonly files: string[];
 }
 
 export class VersionParser {

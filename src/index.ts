@@ -2,7 +2,7 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { Context } from '@actions/github/lib/context';
 import { GitContextInput, GitContextOps, GitContextOutput, GitInteractor, GitInteractorInput } from './git';
-import { ProjectContextOps } from './project';
+import { ProjectContextOps, VersionResult } from './project';
 import { flatten } from './utils';
 
 function getInputBool(inputName, required: boolean = true) {
@@ -13,18 +13,18 @@ function getInputString(inputName, required: boolean = true) {
   return core.getInput(inputName, { required });
 }
 
-function interactGit(hasChanged: boolean, ghOutput: GitContextOutput,
-                     interactorInput: GitInteractorInput): GitContextOutput | Promise<GitContextOutput> {
+function doCIStep(versionResult: VersionResult, ghOutput: GitContextOutput, interactorInput: GitInteractorInput,
+                  dryRun: boolean): GitContextOutput | Promise<GitContextOutput> {
   if (ghOutput.isTag) {
-    if (hasChanged) {
-      throw `Git tag version doesn't meet with current version in files`;
+    if (versionResult.isChanged) {
+      throw `Git tag version doesn't meet with current version in files. Invalid files: [${versionResult.files}]`;
     }
     return ghOutput;
   }
   if (ghOutput.isReleasePR && ghOutput.isMerged) {
     return { ...ghOutput, ci: { needTag: true, mustFixVersion: false, isPushed: false } };
   }
-  return new GitInteractor(interactorInput).fixVersionThenCommitPush(ghOutput.version, hasChanged)
+  return new GitInteractor(interactorInput).fixVersionThenCommitPush(ghOutput.version, versionResult, dryRun)
                                            .then(ci => ({ ...ghOutput, ci: ci }));
 }
 
@@ -33,7 +33,7 @@ function process(context: Context, ghInput: GitContextInput, interactorInput: Gi
   const ghOutput = new GitContextOps(ghInput).parse(context);
   return ProjectContextOps.create(patterns)
                           .validateThenReplace(ghOutput.version, dryRun)
-                          .then(isChanged => interactGit(isChanged, ghOutput, interactorInput));
+                          .then(r => doCIStep(r, ghOutput, interactorInput, dryRun));
 }
 
 function addActionOutputs(ghOutput: GitContextOutput) {
