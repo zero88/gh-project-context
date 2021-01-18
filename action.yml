@@ -1,5 +1,7 @@
 name: 'Project context'
 description: 'Query and update project context'
+icon: activity
+color: green
 inputs:
   defaultBranch:
     description: 'Project default branch'
