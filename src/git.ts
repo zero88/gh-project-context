@@ -26,7 +26,7 @@ export class GitContextInput {
     this.defaultBranch = defaultBranch ?? GitContextInput.DEFAULT_BRANCH;
     this.tagPrefix = tagPrefix ?? GitContextInput.TAG_PREFIX;
     this.releaseBranchPrefix = releaseBranchPrefix ?? GitContextInput.RELEASE_BRANCH_PREFIX;
-    this.mergedReleaseMsgRegex = new RegExp(mergedReleaseMsg ?? GitContextInput.MERGED_RELEASE_MSG_REGEX, 'gi');
+    this.mergedReleaseMsgRegex = new RegExp(mergedReleaseMsg ?? GitContextInput.MERGED_RELEASE_MSG_REGEX, 'gim');
   }
 }
 
