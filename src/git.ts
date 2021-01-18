@@ -297,6 +297,7 @@ export class GitInteractor {
     if (taggable) {
       commitMsg = `${this.interactorInput.releaseVerMsg} ${v}`;
       commitId = (await strictExec('git', ['rev-parse', '--short', 'HEAD'], 'Cannot show last commit')).stdout;
+      await strictExec('git', ['fetch', '--depth=1'], 'Cannot fetch');
       await strictExec('git', [...this.globalConfig(), 'tag', ...this.gpgSign(false), '-a', '-m', `${commitMsg}`, v,
                                commitId], `Cannot tag`);
       await strictExec('git', ['show', '--shortstat', '--show-signature', v], `Cannot show tag`, false);
