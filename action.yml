@@ -18,8 +18,30 @@ inputs:
     required: false
     default: '^Merge pull request #\d+ from .+/release/.+$'
   patterns:
-    description: 'Project patterns to search/replace version. E.g: <file_path>::<version_path>::<file_ext>'
+    description: 'Project patterns to search/replace version. E.g: <glob_pattern_with_ext>::<regex_group>::<version_regex>'
     required: false
+  allowCommit:
+    description: 'Allow commit to fix version if not match'
+    required: false
+  allowTag:
+    description: 'Allow tag in post script if merged release branch'
+    required: false
+  prefixCiMsg:
+    description: 'Prefix bot message'
+    required: false
+    default: <ci-auto-commit>
+  correctVerMsg:
+    description: 'CI: Correct version message template'
+    required: false
+    default: Correct version
+  releaseVerMsg:
+    description: 'CI: Release version message template'
+    required: false
+    default: Release version
+  dry:
+    description: 'CI: Dry run'
+    required: false
+    default: 'true'
 outputs:
   branch:
     description: 'Current branch name or tag name'
@@ -43,6 +65,16 @@ outputs:
     description: 'Latest commit id'
   version:
     description: 'Current tag version or release version. Null if not tag or release pull request'
+  ci-mustFixVersion:
+    description: 'CI: Need to fix version to match with release name'
+  ci-needTag:
+    description: 'CI: Need to tag new version if release branch is merged'
+  ci-isPushed:
+    description: 'CI: Check whether if auto commit is pushed to remote'
+  ci-commitId:
+    description: 'CI: auto commit id'
+  ci-commitMsg:
+    description: 'CI: auto commit message'
 runs:
   using: 'node12'
   main: 'dist/index.js'

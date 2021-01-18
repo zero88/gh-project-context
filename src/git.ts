@@ -1,5 +1,5 @@
 import { Context } from '@actions/github/lib/context';
-import { exec, ExecResult } from './exec';
+import { strictExec } from './exec';
 
 /**
  * Declares Git context Input
@@ -83,12 +83,39 @@ export interface GitContextOutput {
    * @type {string}
    */
   readonly commitId: string;
+
+  /**
+   * CI context
+   */
+  readonly ci?: CIContext;
+}
+
+export interface CIContext {
+  /**
+   * Need to fix version to match with release name
+   */
+  readonly mustFixVersion: boolean;
+  /**
+   * Need to tag new version if release branch is merged
+   */
+  readonly needTag: boolean;
+  /**
+   * Check whether if auto commit is pushed to remote
+   */
+  readonly isPushed: boolean;
+  /**
+   * CI auto commit id
+   */
+  readonly commitId?: string;
+  /**
+   * CI auto commit message
+   */
+  readonly commitMsg?: string;
 }
 
 export class GitContextOps {
 
   readonly ctxInput: GitContextInput;
-  private;
 
   constructor(ctxInput: GitContextInput) {
     this.ctxInput = ctxInput;
@@ -167,11 +194,36 @@ export class GitInteractorInput {
   static readonly CORRECT_VERSION_MSG = 'Correct version';
   static readonly RELEASE_VERSION_MSG = 'Release version';
 
+  /**
+   * Allow commit to fix version if not match
+   * @type {boolean}
+   */
+  readonly allowCommit: boolean;
+  /**
+   * Allow tag in post script if merged release branch
+   * @type {boolean}
+   */
+  readonly allowTag: boolean;
+  /**
+   * CI: Prefix bot message
+   * @type {string}
+   */
   readonly prefixCiMsg: string;
+  /**
+   * CI: Correct version message template
+   * @type {string}
+   */
   readonly correctVerMsg: string;
+  /**
+   * CI: Release version message template
+   * @type {string}
+   */
   readonly releaseVerMsg: string;
 
-  constructor(prefixCiMsg: string, correctVerMsg: string, releaseVerMsg: string) {
+  constructor(allowCommit: boolean, allowTag: boolean, prefixCiMsg: string, correctVerMsg: string,
+              releaseVerMsg: string) {
+    this.allowCommit = allowCommit ?? true;
+    this.allowTag = allowTag ?? true;
     this.prefixCiMsg = prefixCiMsg ?? GitInteractorInput.PREFIX_CI_MSG;
     this.correctVerMsg = correctVerMsg ?? GitInteractorInput.CORRECT_VERSION_MSG;
     this.releaseVerMsg = releaseVerMsg ?? GitInteractorInput.RELEASE_VERSION_MSG;
@@ -182,17 +234,38 @@ export class GitInteractorInput {
  * Represents for Git CI interactor like: commit, push, tag
  */
 export class GitInteractor {
-  commitThenPush = (msg = '<ci-auto-commit> Correct version'): Promise<ExecResult> => {
-    return exec('git', ['commit', '-S', '-am', msg])
-      .then(_ => exec('git', ['show', '--shortstat', '--show-signature']))
-      .then(_ => exec('git', ['push']));
+
+  readonly interactorInput: GitInteractorInput;
+
+  constructor(interactorInput: GitInteractorInput) {
+    this.interactorInput = interactorInput;
+  }
+
+  fixVersionThenCommitPush = async (version: string, hasChanged: boolean): Promise<CIContext> => {
+    const committable = this.interactorInput.allowCommit && hasChanged;
+    let commitMsg = '';
+    let commitId = '';
+    if (committable) {
+      commitMsg = `${this.interactorInput.prefixCiMsg} ${this.interactorInput.correctVerMsg} ${version}`;
+      await strictExec('git', ['commit', '-S', '-am', commitMsg], true, `Cannot commit`);
+      await strictExec('git', ['show', '--shortstat', '--show-signature'], false, `Cannot show commit`);
+      await strictExec('git', ['push'], true, `Cannot push`);
+      commitId = (await strictExec('git', ['rev-parse', 'HEAD'], true, 'Cannot show last commit')).stdout;
+    }
+    return Promise.resolve({ mustFixVersion: hasChanged, needTag: false, isPushed: committable, commitMsg, commitId });
   };
 
-  tagThenPush = async (version: string, commitId?: string, msg = 'Release version'): Promise<ExecResult> => {
+  tagThenPush = async (version: string, needTag: boolean, commitId?: string): Promise<CIContext> => {
+    const taggable = this.interactorInput.allowTag && needTag;
     const v = `v${version}`;
-    return (commitId ? Promise.resolve(commitId) : exec('git rev-parse --short HEAD').then(r => r.stdout))
-      .then(sha => exec('git', ['tag', '-as', '-m', `${msg} ${version}`, v, sha]))
-      .then(_ => exec('git', ['show', '--shortstat', '--show-signature', v]))
-      .then(_ => exec('git', ['push', v]));
+    let commitMsg = '';
+    if (taggable) {
+      commitMsg = `${this.interactorInput.releaseVerMsg} ${v}`;
+      commitId = (await strictExec('git', ['rev-parse', '--short', 'HEAD'], true, 'Cannot show last commit')).stdout;
+      await strictExec('git', ['tag', '-as', '-m', `${commitMsg}`, v, commitId], true, `Cannot tag`);
+      await strictExec('git', ['show', '--shortstat', '--show-signature', v], false, `Cannot show tag`);
+      await strictExec('git', ['push', v], true, `Cannot push`);
+    }
+    return Promise.resolve({ mustFixVersion: false, needTag: needTag, isPushed: taggable, commitMsg, commitId });
   };
 }

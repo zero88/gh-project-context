@@ -13,7 +13,7 @@ export const exec = async (command: string, args: string[] = [], silent?: boolea
 
   const options: ExecOptions = {
     silent: silent,
-    ignoreReturnCode: true
+    ignoreReturnCode: true,
   };
   options.listeners = {
     stdout: (data: Buffer) => {
@@ -21,7 +21,7 @@ export const exec = async (command: string, args: string[] = [], silent?: boolea
     },
     stderr: (data: Buffer) => {
       stderr += data.toString();
-    }
+    },
   };
 
   const returnCode: number = await aexec.exec(command, args, options);
@@ -29,6 +29,16 @@ export const exec = async (command: string, args: string[] = [], silent?: boolea
   return {
     success: returnCode === 0,
     stdout: stdout.trim(),
-    stderr: stderr.trim()
+    stderr: stderr.trim(),
   };
+};
+
+export const strictExec = async (command: string, args: string[] = [], silent?: boolean,
+                                 msgIfError?: string): Promise<ExecResult> => {
+  return exec(command, args, silent).then(r => {
+    if (!r.success) {
+      throw `${msgIfError}. Error: ${r.stderr ?? r.stdout}`;
+    }
+    return r;
+  });
 };
