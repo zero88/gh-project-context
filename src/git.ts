@@ -301,7 +301,7 @@ export class GitInteractor {
       await strictExec('git', [...this.globalConfig(), 'tag', ...this.gpgSign(false), '-a', '-m', `${commitMsg}`, v,
                                commitId], `Cannot tag`);
       await strictExec('git', ['show', '--shortstat', '--show-signature', v], `Cannot show tag`, false);
-      await strictExec('git', ['push', v], `Cannot push`, false);
+      await strictExec('git', ['push', '-uf', 'origin', v], `Cannot push`, false);
     }
     return Promise.resolve({ mustFixVersion: false, needTag: needTag, isPushed: taggable, commitMsg, commitId });
   };
