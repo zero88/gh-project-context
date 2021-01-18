@@ -19,13 +19,14 @@ export class GitContextInput {
   readonly defaultBranch: string;
   readonly tagPrefix: string;
   readonly releaseBranchPrefix: string;
-  readonly mergedReleaseMsgRegex: string;
+  readonly mergedReleaseMsgRegex: RegExp;
 
-  constructor(defaultBranch: string, tagPrefix: string, releaseBranchPrefix: string, mergedReleaseMsgRegex: string) {
+  constructor(defaultBranch?: string, tagPrefix?: string, releaseBranchPrefix?: string,
+              mergedReleaseMsg?: string) {
     this.defaultBranch = defaultBranch ?? GitContextInput.DEFAULT_BRANCH;
     this.tagPrefix = tagPrefix ?? GitContextInput.TAG_PREFIX;
     this.releaseBranchPrefix = releaseBranchPrefix ?? GitContextInput.RELEASE_BRANCH_PREFIX;
-    this.mergedReleaseMsgRegex = mergedReleaseMsgRegex ?? GitContextInput.MERGED_RELEASE_MSG_REGEX;
+    this.mergedReleaseMsgRegex = new RegExp(mergedReleaseMsg ?? GitContextInput.MERGED_RELEASE_MSG_REGEX, 'gi');
   }
 }
 
@@ -164,7 +165,7 @@ export class GitContextOps {
   }
 
   private checkAfterMergedReleasePR(event: string, onDefaultBranch: boolean, commitMsg: string): boolean {
-    return event === 'push' && onDefaultBranch && new RegExp(this.ctxInput.mergedReleaseMsgRegex, 'gi').test(commitMsg);
+    return event === 'push' && onDefaultBranch && this.ctxInput.mergedReleaseMsgRegex.test(commitMsg);
   }
 
   private getCommitId(context: Context, isPR: boolean): string {
@@ -272,10 +273,10 @@ export class GitInteractor {
     if (committable) {
       commitMsg = `${this.interactorInput.prefixCiMsg} ${this.interactorInput.correctVerMsg} ${version}`;
       await strictExec('git', ['fetch', '--depth=1'], 'Cannot fetch');
-      await strictExec('git', ['checkout', branch], 'Cannot checkout', false);
+      await strictExec('git', ['checkout', branch], 'Cannot checkout');
       await strictExec('git', [...this.globalConfig(), 'commit', ...this.gpgSign(true), '-am', commitMsg],
                        `Cannot commit`);
-      await strictExec('git', ['show', '--shortstat', '--show-signature'], `Cannot show commit`, false);
+      await strictExec('git', ['show', '--shortstat', '--show-signature'], `Cannot show recently commit`, false);
       await strictExec('git', ['push'], `Cannot push`, false);
       commitId = (await strictExec('git', ['rev-parse', 'HEAD'], 'Cannot show last commit')).stdout;
     }

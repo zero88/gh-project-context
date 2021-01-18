@@ -21,11 +21,16 @@ function doCIStep(versionResult: VersionResult, ghOutput: GitContextOutput, inte
     }
     return ghOutput;
   }
-  if (ghOutput.isReleasePR && ghOutput.isMerged) {
-    core.warning(`Need tag version ${ghOutput.version}`);
-    return { ...ghOutput, ci: { needTag: true, mustFixVersion: false, isPushed: false } };
+  if (ghOutput.isClosed || ghOutput.isMerged) {
+    return ghOutput;
   }
   const interactor = new GitInteractor(interactorInput);
+  if (ghOutput.isAfterMergedReleasePR) {
+    core.info(`Tag new version ${ghOutput.version}...`);
+    return interactor.tagThenPush(ghOutput.version, ghOutput.isAfterMergedReleasePR, dryRun)
+                     .then(ci => ({ ...ghOutput, ci: ci }));
+  }
+  core.info(`Fixing version ${ghOutput.version}...`);
   return interactor.fixVersionThenCommitPush(ghOutput.branch, ghOutput.version, versionResult, dryRun)
                    .then(ci => ({ ...ghOutput, ci: ci }));
 }
@@ -40,6 +45,7 @@ function process(context: Context, ghInput: GitContextInput, interactorInput: Gi
 
 function addActionOutputs(ghOutput: GitContextOutput) {
   Object.keys(flatten(ghOutput, '-')).forEach(k => core.setOutput(k, ghOutput[k]));
+  core.info(`===================`);
   core.info(`Context output: ${JSON.stringify(ghOutput, undefined, 2)}`);
 }
 
@@ -61,7 +67,6 @@ function run(context: Context) {
   const dryRun = getInputBool('dry');
   process(context, ghInput, interactorInput, patterns, dryRun).then(ghOutput => addActionOutputs(ghOutput))
                                                               .catch(error => core.setFailed(error));
-
 }
 
 run(github.context);
