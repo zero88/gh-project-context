@@ -62,6 +62,9 @@ export class ProjectContextOps {
   }
 
   validateThenReplace(version: string, dryRun: boolean = true): Promise<VersionResult> {
+    if (!version || version.trim().length === 0) {
+      return Promise.resolve({ isChanged: false });
+    }
     return Promise.all(this.inputs.map(input => this.replace(input, dryRun, version)))
                   .then(result => result.reduce((p, c) => p.concat(c), [])
                                         .filter(r => r.hasChanged))
@@ -81,7 +84,7 @@ export class ProjectContextOps {
 
 export interface VersionResult {
   readonly isChanged: boolean;
-  readonly files: string[];
+  readonly files?: string[];
 }
 
 export class VersionParser {
