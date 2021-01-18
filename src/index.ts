@@ -3,6 +3,7 @@ import * as github from '@actions/github';
 import { Context } from '@actions/github/lib/context';
 import { GitContextInput, GitContextOps, GitContextOutput, GitInteractor, GitInteractorInput } from './git';
 import { ProjectContextOps } from './project';
+import { flatten } from './utils';
 
 function getInputBool(inputName, required: boolean = true) {
   return Boolean(JSON.parse(core.getInput(inputName, { required })));

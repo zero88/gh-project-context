@@ -1,4 +1,4 @@
-const flatten = (obj: object, sep = '.', prefix = '', res = {}): object => {
+export const flatten = (obj: object, sep = '.', prefix = '', res = {}): object => {
   return Object.entries(obj).reduce((r, [key, val]) => {
     const k = `${prefix}${key}`;
     if (val !== null && typeof val === 'object') {
