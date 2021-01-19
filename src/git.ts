@@ -17,8 +17,20 @@ export class GitContextInput {
    * @type {string}
    */
   readonly defaultBranch: string;
+  /**
+   * Git Tag Prefix
+   * @type {string}
+   */
   readonly tagPrefix: string;
+  /**
+   * Git Release Branch Prefix
+   * @type {string}
+   */
   readonly releaseBranchPrefix: string;
+  /**
+   * Merged release message regex
+   * @type {string}
+   */
   readonly mergedReleaseMsgRegex: RegExp;
 
   constructor(defaultBranch?: string, tagPrefix?: string, releaseBranchPrefix?: string,
@@ -204,12 +216,12 @@ export class GitInteractorInput {
   static readonly RELEASE_VERSION_MSG = 'Release version';
 
   /**
-   * Allow commit to fix version if not match
+   * CI: Allow git commit to fix version if not match
    * @type {boolean}
    */
   readonly allowCommit: boolean;
   /**
-   * Allow tag in post script if merged release branch
+   * CI: Allow git tag if merged release branch
    * @type {boolean}
    */
   readonly allowTag: boolean;
@@ -229,12 +241,12 @@ export class GitInteractorInput {
    */
   readonly releaseVerMsg: string;
   /**
-   * CI: User name to commit
+   * CI: Username to commit. Skip if any config visible in Runner git config
    * @type {string}
    */
   readonly userName: string;
   /**
-   * CI: User email to commit
+   * CI: User email to commit. Skip if any config visible in Runner git config
    * @type {string}
    */
   readonly userEmail: string;

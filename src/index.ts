@@ -41,7 +41,7 @@ function process(context: Context, ghInput: GitContextInput, interactorInput: Gi
 }
 
 function addActionOutputs(ghOutput: GitContextOutput) {
-  Object.keys(flatten(ghOutput, '-')).forEach(k => core.setOutput(k, ghOutput[k]));
+  Object.keys(flatten(ghOutput)).forEach(k => core.setOutput(k, ghOutput[k]));
   core.info(`===================`);
   core.info(`Context output: ${JSON.stringify(ghOutput, undefined, 2)}`);
 }

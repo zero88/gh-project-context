@@ -32,6 +32,11 @@ export class ProjectContextOps {
     this.inputs = inputs;
   }
 
+  /**
+   * Project patterns to search/replace version. Format: <glob_pattern_with_ext>::<regex_group>::<version_regex>
+   * @param {string} patterns
+   * @return {ProjectContextOps}
+   */
   static create(patterns: string): ProjectContextOps {
     return new ProjectContextOps(ProjectContextOps.parse(patterns));
   }
