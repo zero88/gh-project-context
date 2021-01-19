@@ -4,8 +4,8 @@
 
 Build project context and correct Project version in any language version before release.
 
-This action is build a Project context depends on GitHub event to make decision in further step, e.g: do build, do 
-test, do analysis, do tag, do release based on your workflow model.
+This action is build a Project context depends on GitHub event to make decision in further step, e.g: do build, do test,
+do analysis, do tag, do release based on your workflow model.
 
 It also verifies and corrects automatically Project version in metadata file in `release pull request` or `tag`:
 
@@ -55,28 +55,38 @@ jobs:
 
 ![Demo](.github/demo_context.png "Demo")
 
-### Input and Output
+## Input and Output
 
-#### Input
+### Input
 
-| Name                  | Description                                                                                                  | Required | Default value                                     |
-| --------------------- | ------------------------------------------------------------------------------------------------------------ | -------- | ------------------------------------------------- |
-| defaultBranch         | Project default branch                                                                                       | false    | `main`                                            |
-| tagPrefix             | Tag Prefix                                                                                                   | false    | `v`                                               |
-| releaseBranchPrefix   | Git Release Branch Prefix                                                                                    | false    | `release/`                                        |
-| mergedReleaseMsgRegex | Merged release message regex                                                                                 | false    | `^Merge pull request #[0-9]+ from .+/release/.+$` |
-| patterns              | Project patterns to search/replace a version. E.g: `<glob_pattern_with_ext>::<regex_group>::<version_regex>` | false    | `as`                                              |
-| allowCommit           | CI: Allow git commit to fix version if not match                                                             | false    | `true`                                            |
-| allowTag              | CI: Allow git tag if merged release branch                                                                   | false    | `true`                                            |
-| userName              | CI: Username to commit                                                                                       | false    | `ci-bot`                                          |
-| userEmail             | CI: User email to commit                                                                                     | false    | `actions@github.com`                              |
-| mustSign              | CI: Required GPG sign when git commit/tag                                                                    | false    | `false`                                           |
-| prefixCiMsg           | CI: Prefix bot message                                                                                       | false    | `<ci-auto-commit>`                                |
-| correctVerMsg         | CI: Correct version message template                                                                         | false    | `Correct version`                                 |
-| releaseVerMsg         | CI: Release version message template                                                                         | false    | `release/`                                        |
-| dry                   | CI: Dry run. If `true`, action will run without do modify files or git commit/tag                            | false    | `true`                                            |
+| Name                  | Description                                                                                                     | Required | Default value                                     |
+| --------------------- | --------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------- |
+| defaultBranch         | Project default branch                                                                                          | false    | `main`                                            |
+| tagPrefix             | Tag Prefix                                                                                                      | false    | `v`                                               |
+| releaseBranchPrefix   | Git Release Branch Prefix                                                                                       | false    | `release/`                                        |
+| mergedReleaseMsgRegex | Merged release message regex                                                                                    | false    | `^Merge pull request #[0-9]+ from .+/release/.+$` |
+| patterns              | Project patterns to search/replace a version.<br>E.g: `<glob_pattern_with_ext>::<regex_group>::<version_regex>` | false    | See [below](#default-pattern-input)               |
+| allowCommit           | CI: Allow git commit to fix version if not match                                                                | false    | `true`                                            |
+| allowTag              | CI: Allow git tag if merged release branch                                                                      | false    | `true`                                            |
+| userName              | CI: Username to commit                                                                                          | false    | `ci-bot`                                          |
+| userEmail             | CI: User email to commit                                                                                        | false    | `actions@github.com`                              |
+| mustSign              | CI: Required GPG sign when git commit/tag                                                                       | false    | `false`                                           |
+| prefixCiMsg           | CI: Prefix bot message                                                                                          | false    | `<ci-auto-commit>`                                |
+| correctVerMsg         | CI: Correct version message template                                                                            | false    | `Correct version`                                 |
+| releaseVerMsg         | CI: Release version message template                                                                            | false    | `release/`                                        |
+| dry                   | CI: Dry run. If `true`, action will run without do modify files or git commit/tag                               | false    | `true`                                            |
 
-#### Output
+#### Default Pattern Input
+
+```
+pyproject.toml::(version\s?=\s?)(")([^"]+)(")::2
+package?(-lock).json::("version"\s?:\s?)(")([^"]+)(")::2
+@(gradle|maven|pom|project).properties::(version\s?=\s?)(.+)::1
+@(application|version).yml::(version:\s)(.+)::1
+@(VERSION|version)?(.txt)::.+::0
+```
+
+### Output
 
 Project context based on current `GitHub event`
 
@@ -98,7 +108,6 @@ Project context based on current `GitHub event`
 | ci_isPushed            | CI: Check whether if auto commit is pushed to remote                                                        |
 | ci_commitId            | CI: auto commit id                                                                                          |
 | ci_commitMsg           | CI: auto commit message                                                                                     |
-
 
 ## Use Cases
 

@@ -21,8 +21,14 @@ inputs:
     required: false
     default: '^Merge pull request #[0-9]+ from .+/release/.+$'
   patterns:
-    description: 'Project patterns to search/replace version. Format: <glob_pattern_with_ext>::<regex_group>::<version_regex>'
+    description: 'Project patterns to search/replace version. Format: <glob_pattern_with_ext>::<version_regex>::<regex_group>'
     required: false
+    default: |
+      pyproject.toml::(version\s?=\s?)(")([^"]+)(")::2
+      package?(-lock).json::("version"\s?:\s?)(")([^"]+)(")::2
+      @(gradle|maven|pom|project).properties::(version\s?=\s?)(.+)::1
+      @(application|version).yml::(version:\s)(.+)::1
+      @(VERSION|version)?(.txt)::.+::0
   allowCommit:
     description: 'CI: Allow git commit to fix version if not match'
     required: false
