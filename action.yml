@@ -9,11 +9,11 @@ inputs:
     required: false
     default: 'main'
   tagPrefix:
-    description: 'Tag Prefix'
+    description: 'Git Tag Prefix'
     required: false
     default: 'v'
   releaseBranchPrefix:
-    description: 'Release branch Prefix'
+    description: 'Git Release Branch Prefix'
     required: false
     default: 'release/'
   mergedReleaseMsgRegex:
@@ -21,26 +21,26 @@ inputs:
     required: false
     default: '^Merge pull request #[0-9]+ from .+/release/.+$'
   patterns:
-    description: 'Project patterns to search/replace version. E.g: <glob_pattern_with_ext>::<regex_group>::<version_regex>'
+    description: 'Project patterns to search/replace version. Format: <glob_pattern_with_ext>::<regex_group>::<version_regex>'
     required: false
   allowCommit:
-    description: 'Allow commit to fix version if not match'
+    description: 'CI: Allow git commit to fix version if not match'
     required: false
     default: 'true'
   allowTag:
-    description: 'Allow tag in post script if merged release branch'
+    description: 'CI: Allow git tag if merged release branch'
     required: false
     default: 'true'
   userName:
-    description: 'CI: User name to commit'
+    description: 'CI: Username to commit. Skip if any config visible in Runner git config'
     required: false
     default: 'ci-bot'
   userEmail:
-    description: 'CI: User email to commit'
+    description: 'CI: User email to commit. Skip if any config visible in Runner git config'
     required: false
     default: 'actions@github.com'
   mustSign:
-    description: 'CI: Required GPG sign'
+    description: 'CI: Required GPG sign when git commit/tag'
     required: false
     default: 'false'
   prefixCiMsg:
@@ -56,7 +56,7 @@ inputs:
     required: false
     default: Release version
   dry:
-    description: 'CI: Dry run'
+    description: 'CI: Dry run. If `true`, action will run without do modify files or git commit/tag'
     required: false
     default: 'true'
 outputs:
@@ -77,20 +77,20 @@ outputs:
   isTag:
     description: 'Check whether current event is on ref tag'
   commitMsg:
-    description: 'Latest commit message'
+    description: 'The latest commit message'
   commitId:
-    description: 'Latest commit id'
+    description: 'The latest commit id'
   version:
     description: 'Current tag version or release version. Null if not tag or release pull request'
-  ci-mustFixVersion:
+  ci_mustFixVersion:
     description: 'CI: Need to fix version to match with release name'
-  ci-needTag:
+  ci_needTag:
     description: 'CI: Need to tag new version if release branch is merged'
-  ci-isPushed:
+  ci_isPushed:
     description: 'CI: Check whether if auto commit is pushed to remote'
-  ci-commitId:
+  ci_commitId:
     description: 'CI: auto commit id'
-  ci-commitMsg:
+  ci_commitMsg:
     description: 'CI: auto commit message'
 runs:
   using: 'node12'
