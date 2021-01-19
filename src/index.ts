@@ -13,7 +13,7 @@ function getInputString(inputName, required: boolean = true) {
   return core.getInput(inputName, { required });
 }
 
-function doCIStep(versionResult: VersionResult, ghOutput: GitContextOutput, interactorInput: GitInteractorInput,
+function doCIStep(versionResult: VersionResult, ghOutput: GitContextOutput, interactor: GitInteractor,
                   dryRun: boolean): GitContextOutput | Promise<GitContextOutput> {
   if (ghOutput.isTag && versionResult.isChanged) {
     throw `Git tag version doesn't meet with current version in files. Invalid files: [${versionResult.files}]`;
@@ -21,7 +21,6 @@ function doCIStep(versionResult: VersionResult, ghOutput: GitContextOutput, inte
   if (ghOutput.isTag || ghOutput.isAfterMergedReleasePR) {
     return ghOutput;
   }
-  const interactor = new GitInteractor(interactorInput);
   if (ghOutput.isReleasePR && ghOutput.isMerged) {
     core.info(`Tag new version ${ghOutput.version}...`);
     return interactor.tagThenPush(ghOutput.version, ghOutput.isMerged, dryRun)
@@ -35,9 +34,10 @@ function doCIStep(versionResult: VersionResult, ghOutput: GitContextOutput, inte
 function process(context: Context, ghInput: GitContextInput, interactorInput: GitInteractorInput,
                  patterns: string, dryRun: boolean): Promise<GitContextOutput> {
   const ghOutput = new GitContextOps(ghInput).parse(context);
+  const interactor = new GitInteractor(interactorInput, ghInput);
   return ProjectContextOps.create(patterns)
                           .validateThenReplace(ghOutput.version, dryRun)
-                          .then(r => doCIStep(r, ghOutput, interactorInput, dryRun));
+                          .then(r => doCIStep(r, ghOutput, interactor, dryRun));
 }
 
 function addActionOutputs(ghOutput: GitContextOutput) {
