@@ -14,6 +14,20 @@ describe('Parser', () => {
   });
 
   test('parse_default', () => {
+    const patterns = ProjectContextOps.DEFAULT_PATTERNS
+                                      .split(/\r?\n/)
+                                      .map(v => `./tests/**/default/${v.trim()}`).join(`\n`);
+    console.log(patterns);
+    const inputs = ProjectContextOps.parse(patterns);
+    expect(inputs.length).toEqual(5);
+    expect(inputs.find(i => i.ext === '.toml')?.files?.length).toEqual(1);
+    expect(inputs.find(i => i.ext === '.json')?.files?.length).toEqual(2);
+    expect(inputs.find(i => i.ext === '.yml')?.files?.length).toEqual(2);
+    expect(inputs.find(i => i.ext === '.properties')?.files?.length).toEqual(4);
+    expect(inputs.find(i => i.ext === '.txt')?.files?.length).toEqual(2);
+  });
+
+  test('parse_customize', () => {
     const patterns = `./tests/**/project/*.json,./tests/**/project/*.properties
     ./tests/**/project/*.toml,./tests/**/project/*.txt
     ./tests/**/project/*.yaml

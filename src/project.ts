@@ -26,6 +26,12 @@ export interface ProjectContextInput {
 
 export class ProjectContextOps {
 
+  static readonly DEFAULT_PATTERNS = `pyproject.toml::(version\\s?=\\s?)(")([^"]+)(")::2
+  package?(-lock).json::("version"\\s?:\\s?)(")([^"]+)(")::2
+  @(gradle|maven|pom|project).properties::(version\\s?=\\s?)(.+)::1
+  @(application|version).yml::(version:\\s)(.+)::1
+  @(VERSION|version)?(.txt)::.+::0
+  `;
   readonly inputs: ProjectContextInput[];
 
   private constructor(inputs: ProjectContextInput[]) {
@@ -33,8 +39,9 @@ export class ProjectContextOps {
   }
 
   /**
-   * Project patterns to search/replace version. Format: <glob_pattern_with_ext>::<regex_group>::<version_regex>
+   * Project patterns to search/replace version. Format: <glob_pattern_with_ext>::<version_regex>::<regex_group>
    * @param {string} patterns
+   * @see DEFAULT_PATTERNS
    * @return {ProjectContextOps}
    */
   static create(patterns: string): ProjectContextOps {
@@ -42,6 +49,7 @@ export class ProjectContextOps {
   }
 
   static parse(patterns: string): ProjectContextInput[] {
+    patterns = patterns ?? this.DEFAULT_PATTERNS;
     return patterns.split(/\r?\n/)
                    .reduce<string[]>((acc, line) => acc.concat(line.split(','))
                                                        .filter(pat => pat).map(pat => pat.trim()), [])
@@ -55,9 +63,9 @@ export class ProjectContextOps {
     if (files.length === 0) {
       return <ProjectContextInput><unknown>null;
     }
-    const ext = path.extname(files?.[0]) ?? '.txt';
-    const group = parseInt(arr?.[1]);
-    const pattern = arr?.[2];
+    const ext = path.extname(files?.[0]) || '.txt';
+    const pattern = arr?.[1];
+    const group = parseInt(arr?.[2]);
     const regex = VersionParser.findRegex(ext, pattern, isNaN(group) ? 0 : group);
     return { files, ext, pattern: regex[0], group: regex[1] };
   }
