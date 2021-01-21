@@ -77,13 +77,13 @@ export interface Decision {
    * <p>
    * Default value is if `!output.ci.isPushed && !output.isClosed`
    */
-  readonly shouldBuild: boolean;
+  readonly build: boolean;
   /**
    * Should publish artifact: such as push artifact to any registry: npm, docker, maven, pypi..
    * <p>
    * Default value is if `output.decision.build && (output.isOnMaster || output.isTag)`
    */
-  readonly shouldPublish: boolean;
+  readonly publish: boolean;
 }
 
 export interface CIContext {

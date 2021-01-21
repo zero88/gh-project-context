@@ -5,7 +5,7 @@ import * as path from 'path';
 import { replaceInFile, ReplaceResult } from 'replace-in-file';
 import { inc, valid } from 'semver';
 import { GitContextInput, GitInteractor, GitInteractorInput } from './git';
-import { CIContext, Decision, GitContextOutput, Versions } from './output';
+import { Decision, GitContextOutput, Versions } from './output';
 
 export interface ProjectContextInput {
   /**
@@ -85,9 +85,11 @@ export class ProjectContextOps {
 
   validateThenReplace(version: string, dryRun: boolean = true): Promise<FileVersionResult> {
     if (!version || version.trim().length === 0) {
-      return Promise.resolve({ isChanged: false });
+      return Promise.all(this.pInputs.map(input => FileVersionParser.search(input)))
+                    .then(versions => versions.find(v => v))
+                    .then(v => ({ isChanged: false, version: v }));
     }
-    return Promise.all(this.pInputs.map(input => this.replace(input, dryRun, version)))
+    return Promise.all(this.pInputs.map(input => FileVersionParser.replace(input, dryRun, version)))
                   .then(result => result.reduce((p, c) => p.concat(c), [])
                                         .filter(r => r.hasChanged))
                   .then(r => {
@@ -99,44 +101,42 @@ export class ProjectContextOps {
   makeDecision(output: GitContextOutput): Decision {
     const shouldBuild = !output.isClosed && !output.ci?.isPushed;
     const shouldPublish = shouldBuild && (output.onDefaultBranch || output.isTag);
-    return { shouldBuild, shouldPublish };
+    return { build: shouldBuild, publish: shouldPublish };
   }
 
-  ciStep(versionResult: FileVersionResult, ghOutput: GitContextOutput, dryRun: boolean): Promise<CIContext> {
-    if (ghOutput.isTag && versionResult.isChanged) {
+  ciStep(versionResult: FileVersionResult, ghOutput: GitContextOutput, dryRun: boolean): Promise<GitContextOutput> {
+    const mustFixVersion = versionResult.isChanged;
+    const ver = { current: versionResult.version ?? '' };
+    if (ghOutput.isTag && mustFixVersion) {
       throw `Git tag version doesn't meet with current version in files. Invalid files: [${versionResult.files}]`;
     }
     const interactor = new GitInteractor(this.iInput, this.gInput);
     if (ghOutput.isTag || ghOutput.isAfterMergedReleasePR) {
-      return Promise.resolve(<any>null);
+      return Promise.resolve({ ...ghOutput, ver });
     }
     if (ghOutput.isReleasePR && ghOutput.isMerged) {
       core.info(`Tag new version ${ghOutput.version}...`);
-      return interactor.tagThenPush(ghOutput.version, ghOutput.isMerged, dryRun);
+      return interactor.tagThenPush(ghOutput.version, ghOutput.isMerged, dryRun)
+                       .then(ci => ({ ...ghOutput, ci }));
     }
     core.info(`Fixing version ${ghOutput.version}...`);
-    return interactor.fixVersionThenCommitPush(ghOutput.branch, ghOutput.version, versionResult, dryRun);
+    return interactor.commitPushIfNeed(ghOutput.branch, ghOutput.version, mustFixVersion, dryRun)
+                     .then(ci => ({ ...ghOutput, ci, ver }));
   }
 
   nextVersion(output: GitContextOutput): Versions {
-    const v = valid(output.version);
+    const v = valid(output.version) ?? valid(output.ver?.current);
     if (!output.isAfterMergedReleasePR || !v) {
       return <any>null;
     }
     return { current: v, nextMajor: inc(v, 'major'), nextMinor: inc(v, 'minor'), nextPath: inc(v, 'patch') };
-  }
-
-  private replace(input: ProjectContextInput, dryRun: boolean, version: string): Promise<ReplaceResult[]> {
-    return replaceInFile({
-                           files: input.files, dry: dryRun, from: input.pattern,
-                           to: (match, _) => FileVersionParser.replace(version, match, input.pattern, input.group),
-                         });
   }
 }
 
 export interface FileVersionResult {
   readonly isChanged: boolean;
   readonly files?: string[];
+  readonly version?: string;
 }
 
 export class FileVersionParser {
@@ -164,7 +164,7 @@ export class FileVersionParser {
     return match.match(regex);
   }
 
-  static replace(expected: string, actual: string, pattern: RegExp, group: number) {
+  static replaceMatch(expected: string, actual: string, pattern: RegExp, group: number): any {
     const matcher = FileVersionParser.extract(actual, pattern);
     const shouldSkipFirst = matcher?.[0] === actual;
     if (group === 0 && shouldSkipFirst) {
@@ -173,5 +173,34 @@ export class FileVersionParser {
     const g = shouldSkipFirst ? group + 1 : group;
     return matcher ? matcher.reduce((p, c, i) => shouldSkipFirst && i == 0 ? '' : p.concat(i === g ? expected : c), '')
                    : actual;
+  }
+
+  static searchMatch(actual: string, pattern: RegExp, group: number): string {
+    const matcher = FileVersionParser.extract(actual, pattern);
+    const shouldSkipFirst = matcher?.[0] === actual;
+    if (group === 0 && shouldSkipFirst) {
+      return actual;
+    }
+    return <string>matcher?.[shouldSkipFirst ? group + 1 : group];
+  }
+
+  static replace(input: ProjectContextInput, dryRun: boolean, version: string): Promise<ReplaceResult[]> {
+    return replaceInFile(
+      {
+        files: input.files, from: input.pattern, dry: dryRun,
+        to: (match, _) => FileVersionParser.replaceMatch(version, match, input.pattern, input.group),
+      });
+  }
+
+  static search(input: ProjectContextInput): Promise<string> {
+    const versions = new Array<string>();
+    const config = {
+      files: input.files, from: input.pattern, dry: true,
+      to: (match, _) => {
+        versions.push(FileVersionParser.searchMatch(match, input.pattern, input.group));
+        return match;
+      },
+    };
+    return replaceInFile(config).then(_ => versions.find(v => v) ?? '');
   }
 }

@@ -106,6 +106,14 @@ outputs:
     description: |
       Should publish artifact: such as push artifact to any registry: npm, docker, maven, pypi..
       Default value is: `output.decision.build && (output.isOnMaster || output.isTag)`
+  ver_current:
+    description: 'Current version in config file'
+  ver_nextMajor:
+    description: 'Suggest next major version if after release and ver_current is compatible with semver'
+  ver_nextMinor:
+    description: 'Suggest next minor version if after release and ver_current is compatible with semver'
+  ver_nextPatch:
+    description: 'Suggest next patch version if after release and ver_current is compatible with semver'
 runs:
   using: 'node12'
   main: 'dist/index.js'

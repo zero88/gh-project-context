@@ -1,7 +1,6 @@
 import { Context } from '@actions/github/lib/context';
 import { exec, strictExec } from './exec';
 import { CIContext, GitContextOutput } from './output';
-import { FileVersionResult } from './project';
 
 /**
  * Declares Git context Input
@@ -195,9 +194,9 @@ export class GitInteractor {
     this.contextInput = gitContextInput;
   }
 
-  fixVersionThenCommitPush = async (branch: string, version: string, versionResult: FileVersionResult,
-                                    dryRun: boolean): Promise<CIContext> => {
-    const committable = this.interactorInput.allowCommit && versionResult.isChanged && !dryRun;
+  commitPushIfNeed = async (branch: string, version: string, mustFixVersion: boolean,
+                            dryRun: boolean): Promise<CIContext> => {
+    const committable = this.interactorInput.allowCommit && mustFixVersion && !dryRun;
     let commitMsg = '';
     let commitId = '';
     if (committable) {
@@ -210,10 +209,7 @@ export class GitInteractor {
       await strictExec('git', ['push'], `Cannot push`, false);
       commitId = (await strictExec('git', ['rev-parse', 'HEAD'], 'Cannot show last commit')).stdout;
     }
-    return Promise.resolve({
-                             mustFixVersion: versionResult.isChanged, needTag: false,
-                             isPushed: committable, commitMsg, commitId,
-                           });
+    return Promise.resolve({ mustFixVersion, needTag: false, isPushed: committable, commitMsg, commitId });
   };
 
   tagThenPush = async (version: string, needTag: boolean, dryRun: boolean): Promise<CIContext> => {

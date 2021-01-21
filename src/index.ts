@@ -20,7 +20,6 @@ function process(context: Context, ghInput: GitContextInput, interactorInput: Gi
   const ghOutput = new GitContextOps(ghInput).parse(context);
   return ops.validateThenReplace(ghOutput.version, dryRun)
             .then(r => ops.ciStep(r, ghOutput, dryRun))
-            .then(ci => ({ ...ghOutput, ci: ci }))
             .then(output => ({ ...output, decision: ops.makeDecision(output) }))
             .then(output => ({ ...output, ver: ops.nextVersion(output) }));
 }
