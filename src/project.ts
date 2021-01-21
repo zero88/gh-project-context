@@ -3,6 +3,9 @@ import { lstatSync } from 'fs';
 import * as glob from 'glob';
 import * as path from 'path';
 import { replaceInFile, ReplaceResult } from 'replace-in-file';
+import { inc, valid } from 'semver';
+import { GitContextInput, GitInteractor, GitInteractorInput } from './git';
+import { CIContext, Decision, GitContextOutput, Versions } from './output';
 
 export interface ProjectContextInput {
   /**
@@ -32,20 +35,26 @@ export class ProjectContextOps {
   @(application|version).yml::(version:\\s)(.+)::1
   @(VERSION|version)?(.txt)::.+::0
   `;
-  readonly inputs: ProjectContextInput[];
+  readonly gInput: GitContextInput;
+  readonly iInput: GitInteractorInput;
+  readonly pInputs: ProjectContextInput[];
 
-  private constructor(inputs: ProjectContextInput[]) {
-    this.inputs = inputs;
+  private constructor(ghInput: GitContextInput, interactorInput: GitInteractorInput, inputs: ProjectContextInput[]) {
+    this.gInput = ghInput;
+    this.iInput = interactorInput;
+    this.pInputs = inputs;
   }
 
   /**
    * Project patterns to search/replace version. Format: <glob_pattern_with_ext>::<version_regex>::<regex_group>
+   * @param ghInput
+   * @param interactorInput
    * @param {string} patterns
    * @see DEFAULT_PATTERNS
    * @return {ProjectContextOps}
    */
-  static create(patterns: string): ProjectContextOps {
-    return new ProjectContextOps(ProjectContextOps.parse(patterns));
+  static create(ghInput: GitContextInput, interactorInput: GitInteractorInput, patterns: string): ProjectContextOps {
+    return new ProjectContextOps(ghInput, interactorInput, ProjectContextOps.parse(patterns));
   }
 
   static parse(patterns: string): ProjectContextInput[] {
@@ -66,7 +75,7 @@ export class ProjectContextOps {
     const ext = path.extname(files?.[0]) || '.txt';
     const pattern = arr?.[1];
     const group = parseInt(arr?.[2]);
-    const regex = VersionParser.findRegex(ext, pattern, isNaN(group) ? 0 : group);
+    const regex = FileVersionParser.findRegex(ext, pattern, isNaN(group) ? 0 : group);
     return { files, ext, pattern: regex[0], group: regex[1] };
   }
 
@@ -74,11 +83,11 @@ export class ProjectContextOps {
     return glob.sync(pattern).filter(path => lstatSync(path).isFile());
   }
 
-  validateThenReplace(version: string, dryRun: boolean = true): Promise<VersionResult> {
+  validateThenReplace(version: string, dryRun: boolean = true): Promise<FileVersionResult> {
     if (!version || version.trim().length === 0) {
       return Promise.resolve({ isChanged: false });
     }
-    return Promise.all(this.inputs.map(input => this.replace(input, dryRun, version)))
+    return Promise.all(this.pInputs.map(input => this.replace(input, dryRun, version)))
                   .then(result => result.reduce((p, c) => p.concat(c), [])
                                         .filter(r => r.hasChanged))
                   .then(r => {
@@ -87,20 +96,50 @@ export class ProjectContextOps {
                   });
   };
 
+  makeDecision(output: GitContextOutput): Decision {
+    const shouldBuild = !output.isClosed && !output.ci?.isPushed;
+    const shouldPublish = shouldBuild && (output.onDefaultBranch || output.isTag);
+    return { shouldBuild, shouldPublish };
+  }
+
+  ciStep(versionResult: FileVersionResult, ghOutput: GitContextOutput, dryRun: boolean): Promise<CIContext> {
+    if (ghOutput.isTag && versionResult.isChanged) {
+      throw `Git tag version doesn't meet with current version in files. Invalid files: [${versionResult.files}]`;
+    }
+    const interactor = new GitInteractor(this.iInput, this.gInput);
+    if (ghOutput.isTag || ghOutput.isAfterMergedReleasePR) {
+      return Promise.resolve(<any>null);
+    }
+    if (ghOutput.isReleasePR && ghOutput.isMerged) {
+      core.info(`Tag new version ${ghOutput.version}...`);
+      return interactor.tagThenPush(ghOutput.version, ghOutput.isMerged, dryRun);
+    }
+    core.info(`Fixing version ${ghOutput.version}...`);
+    return interactor.fixVersionThenCommitPush(ghOutput.branch, ghOutput.version, versionResult, dryRun);
+  }
+
+  nextVersion(output: GitContextOutput): Versions {
+    const v = valid(output.version);
+    if (!output.isAfterMergedReleasePR || !v) {
+      return <any>null;
+    }
+    return { current: v, nextMajor: inc(v, 'major'), nextMinor: inc(v, 'minor'), nextPath: inc(v, 'patch') };
+  }
+
   private replace(input: ProjectContextInput, dryRun: boolean, version: string): Promise<ReplaceResult[]> {
     return replaceInFile({
                            files: input.files, dry: dryRun, from: input.pattern,
-                           to: (match, _) => VersionParser.replace(version, match, input.pattern, input.group),
+                           to: (match, _) => FileVersionParser.replace(version, match, input.pattern, input.group),
                          });
   }
 }
 
-export interface VersionResult {
+export interface FileVersionResult {
   readonly isChanged: boolean;
   readonly files?: string[];
 }
 
-export class VersionParser {
+export class FileVersionParser {
 
   static findRegex(ext: string, versionPattern: string, group: number): [RegExp, number] {
     if (versionPattern && versionPattern.trim().length === 0) {
@@ -126,7 +165,7 @@ export class VersionParser {
   }
 
   static replace(expected: string, actual: string, pattern: RegExp, group: number) {
-    const matcher = VersionParser.extract(actual, pattern);
+    const matcher = FileVersionParser.extract(actual, pattern);
     const shouldSkipFirst = matcher?.[0] === actual;
     if (group === 0 && shouldSkipFirst) {
       return expected;
@@ -136,4 +175,3 @@ export class VersionParser {
                    : actual;
   }
 }
-

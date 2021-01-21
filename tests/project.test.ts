@@ -1,4 +1,4 @@
-import { ProjectContextOps, VersionParser } from '../src/project';
+import { ProjectContextOps, FileVersionParser } from '../src/project';
 
 describe('Parser', () => {
   function test_version_parser(patterns: string, current: string, next: string, expected: string) {
@@ -6,7 +6,7 @@ describe('Parser', () => {
     expect(inputs.length).toEqual(1);
     const pattern = inputs[0].pattern;
     expect(pattern.test(current)).toBeTruthy();
-    expect(VersionParser.replace(next, current, pattern, inputs[0].group)).toEqual(expected);
+    expect(FileVersionParser.replace(next, current, pattern, inputs[0].group)).toEqual(expected);
   }
 
   test('parse_empty', () => {
