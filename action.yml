@@ -101,11 +101,11 @@ outputs:
   decision_shouldBuild:
     description: |
       Should run the next step: such as build & test
-      Default value is: `!output.ci.isPushed && !output.isClosed`
+      Default value is: `!ci.isPushed && !isClosed`
   decision_shouldPublish:
     description: |
       Should publish artifact: such as push artifact to any registry: npm, docker, maven, pypi..
-      Default value is: `output.decision.build && (output.isOnMaster || output.isTag)`
+      Default value is: `decision.build && (isOnMaster || isTag)`
   ver_current:
     description: 'Current version in config file'
   ver_nextMajor:
