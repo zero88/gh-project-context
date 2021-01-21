@@ -31,13 +31,20 @@ function doCIStep(versionResult: VersionResult, ghOutput: GitContextOutput, inte
                    .then(ci => ({ ...ghOutput, ci: ci }));
 }
 
+function makeDecision(output: GitContextOutput) {
+  const shouldBuild = !output.isClosed && !output.ci?.isPushed;
+  const shouldPublish = shouldBuild && (output.onDefaultBranch || output.isTag);
+  return { ...output, decision: { shouldBuild, shouldPublish } };
+}
+
 function process(context: Context, ghInput: GitContextInput, interactorInput: GitInteractorInput,
                  patterns: string, dryRun: boolean): Promise<GitContextOutput> {
   const ghOutput = new GitContextOps(ghInput).parse(context);
   const interactor = new GitInteractor(interactorInput, ghInput);
   return ProjectContextOps.create(patterns)
                           .validateThenReplace(ghOutput.version, dryRun)
-                          .then(r => doCIStep(r, ghOutput, interactor, dryRun));
+                          .then(r => doCIStep(r, ghOutput, interactor, dryRun))
+                          .then(output => makeDecision(output));
 }
 
 function addActionOutputs(ghOutput: GitContextOutput) {

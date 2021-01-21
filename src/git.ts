@@ -105,6 +105,25 @@ export interface GitContextOutput {
    * CI context
    */
   readonly ci?: CIContext;
+  /**
+   * Decision output
+   */
+  readonly decision?: Decision;
+}
+
+export interface Decision {
+  /**
+   * Should run the next step: such as build & output.test
+   * <p>
+   * Default value is if `!output.ci.isPushed && !output.isClosed`
+   */
+  readonly shouldBuild: boolean;
+  /**
+   * Should publish artifact: such as push artifact to any registry: npm, docker, maven, pypi..
+   * <p>
+   * Default value is if `output.decision.build && (output.isOnMaster || output.isTag)`
+   */
+  readonly shouldPublish: boolean;
 }
 
 export interface CIContext {
