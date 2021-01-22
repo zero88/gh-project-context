@@ -6,7 +6,7 @@ describe('Parser', () => {
     expect(inputs.length).toEqual(1);
     const pattern = inputs[0].pattern;
     expect(pattern.test(current)).toBeTruthy();
-    expect(FileVersionParser.replace(next, current, pattern, inputs[0].group)).toEqual(expected);
+    expect(FileVersionParser.replaceMatch(next, current, pattern, inputs[0].group)).toEqual(expected);
   }
 
   test('parse_empty', () => {

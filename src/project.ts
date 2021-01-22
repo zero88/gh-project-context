@@ -83,51 +83,58 @@ export class ProjectContextOps {
     return glob.sync(pattern).filter(path => lstatSync(path).isFile());
   }
 
-  validateThenReplace(version: string, dryRun: boolean = true): Promise<FileVersionResult> {
+  fixOrSearchVersion(ghOutput: GitContextOutput, dryRun: boolean = true): Promise<FileVersionResult> {
+    const version = ghOutput.version;
     if (!version || version.trim().length === 0) {
+      core.info(`Searching version in file...`);
       return Promise.all(this.pInputs.map(input => FileVersionParser.search(input)))
                     .then(versions => versions.find(v => v))
-                    .then(v => ({ isChanged: false, version: v }));
+                    .then(v => v || ghOutput.branch)
+                    .then(v => {
+                      core.info(`Version: ${v}`);
+                      return { isChanged: false, version: v };
+                    });
     }
+    core.info(`Fixing version to ${version}...`);
     return Promise.all(this.pInputs.map(input => FileVersionParser.replace(input, dryRun, version)))
                   .then(result => result.reduce((p, c) => p.concat(c), [])
                                         .filter(r => r.hasChanged))
                   .then(r => {
-                    core.debug(`Replace result: ${JSON.stringify(r, null, 2)}`);
-                    return { isChanged: r.length > 0, files: r.map(v => v.file) };
+                    const files = r.map(v => v.file);
+                    core.info(`Fixed ${r.length} file(s): [${files}]`);
+                    return { isChanged: r.length > 0, files };
                   });
   };
 
-  makeDecision(output: GitContextOutput): Decision {
-    const shouldBuild = !output.isClosed && !output.ci?.isPushed;
-    const shouldPublish = shouldBuild && (output.onDefaultBranch || output.isTag);
-    return { build: shouldBuild, publish: shouldPublish };
-  }
-
   ciStep(versionResult: FileVersionResult, ghOutput: GitContextOutput, dryRun: boolean): Promise<GitContextOutput> {
     const mustFixVersion = versionResult.isChanged;
-    const ver = { current: versionResult.version ?? '' };
+    const ver = { current: <string>versionResult.version };
     if (ghOutput.isTag && mustFixVersion) {
       throw `Git tag version doesn't meet with current version in files. Invalid files: [${versionResult.files}]`;
     }
     const interactor = new GitInteractor(this.iInput, this.gInput);
-    if (ghOutput.isTag || ghOutput.isAfterMergedReleasePR) {
-      return Promise.resolve({ ...ghOutput, ver });
+    if (mustFixVersion) {
+      return interactor.commitPushIfNeed(ghOutput.branch, ghOutput.version, mustFixVersion, dryRun)
+                       .then(ci => ({ ...ghOutput, ci, ver }));
     }
     if (ghOutput.isReleasePR && ghOutput.isMerged) {
       core.info(`Tag new version ${ghOutput.version}...`);
       return interactor.tagThenPush(ghOutput.version, ghOutput.isMerged, dryRun)
                        .then(ci => ({ ...ghOutput, ci }));
     }
-    core.info(`Fixing version ${ghOutput.version}...`);
-    return interactor.commitPushIfNeed(ghOutput.branch, ghOutput.version, mustFixVersion, dryRun)
-                     .then(ci => ({ ...ghOutput, ci, ver }));
+    return Promise.resolve({ ...ghOutput, ver });
+  }
+
+  makeDecision(output: GitContextOutput): Decision {
+    const build = !output.isClosed && !output.ci?.isPushed;
+    const publish = build && (output.onDefaultBranch || output.isTag);
+    return { build, publish };
   }
 
   nextVersion(output: GitContextOutput): Versions {
     const v = valid(output.version) ?? valid(output.ver?.current);
     if (!output.isAfterMergedReleasePR || !v) {
-      return <any>null;
+      return <Versions>output.ver;
     }
     return { current: v, nextMajor: inc(v, 'major'), nextMinor: inc(v, 'minor'), nextPath: inc(v, 'patch') };
   }

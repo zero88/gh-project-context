@@ -90,11 +90,11 @@ export interface CIContext {
   /**
    * Need to fix version to match with release name
    */
-  readonly mustFixVersion: boolean;
+  readonly mustFixVersion?: boolean;
   /**
    * Need to tag new version if release branch is merged
    */
-  readonly needTag: boolean;
+  readonly needTag?: boolean;
   /**
    * Check whether if auto commit is pushed to remote
    */
@@ -110,9 +110,21 @@ export interface CIContext {
 }
 
 export interface Versions {
+  /**
+   * Current version in configuration file or tag/release version
+   */
   readonly current: string;
+  /**
+   * Suggest next major version if after release
+   */
   readonly nextMajor?: string | null;
+  /**
+   * Suggest next minor version if after release
+   */
   readonly nextMinor?: string | null;
+  /**
+   * Suggest next path version if after release
+   */
   readonly nextPath?: string | null;
 }
 

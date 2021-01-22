@@ -18,7 +18,7 @@ function process(context: Context, ghInput: GitContextInput, interactorInput: Gi
                  patterns: string, dryRun: boolean): Promise<GitContextOutput> {
   const ops = ProjectContextOps.create(ghInput, interactorInput, patterns);
   const ghOutput = new GitContextOps(ghInput).parse(context);
-  return ops.validateThenReplace(ghOutput.version, dryRun)
+  return ops.fixOrSearchVersion(ghOutput, dryRun)
             .then(r => ops.ciStep(r, ghOutput, dryRun))
             .then(output => ({ ...output, decision: ops.makeDecision(output) }))
             .then(output => ({ ...output, ver: ops.nextVersion(output) }));

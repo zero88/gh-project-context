@@ -209,7 +209,7 @@ export class GitInteractor {
       await strictExec('git', ['push'], `Cannot push`, false);
       commitId = (await strictExec('git', ['rev-parse', 'HEAD'], 'Cannot show last commit')).stdout;
     }
-    return Promise.resolve({ mustFixVersion, needTag: false, isPushed: committable, commitMsg, commitId });
+    return Promise.resolve({ mustFixVersion, isPushed: committable, commitMsg, commitId });
   };
 
   tagThenPush = async (version: string, needTag: boolean, dryRun: boolean): Promise<CIContext> => {
@@ -226,7 +226,7 @@ export class GitInteractor {
       await strictExec('git', ['show', '--shortstat', '--show-signature', v], `Cannot show tag`, false);
       await strictExec('git', ['push', '-uf', 'origin', v], `Cannot push`, false);
     }
-    return Promise.resolve({ mustFixVersion: false, needTag: needTag, isPushed: taggable, commitMsg, commitId });
+    return Promise.resolve({ needTag, isPushed: taggable, commitMsg, commitId });
   };
 
   private commitArgs(commitMsg: string) {
