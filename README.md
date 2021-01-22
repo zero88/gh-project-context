@@ -108,7 +108,7 @@ Project context based on current `GitHub event`
 | ci_isPushed            | CI: Check whether if auto commit is pushed to remote                                                                       |
 | ci_commitId            | CI: auto commit id                                                                                                         |
 | ci_commitMsg           | CI: auto commit message                                                                                                    |
-| decision_build         | Decision: Should run the next step: such as build & test. Default value: `!ci.isPushed && \(!isClosed || !isMerged\)`      |
+| decision_build         | Decision: Should run the next step: such as build & test. Default value: `!ci.isPushed && !isClosed && !isMerged`          |
 | decision_publish       | Should publish artifact: such as push artifact to any registry. Default value: `decision.build && \(isOnMaster || isTag\)` |
 | ver_current            | Current version in config file                                                                                             |
 | ver_nextMajor          | Suggest next major version if after release and `ver_current` is compatible with semver                                    |
