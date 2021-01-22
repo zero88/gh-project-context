@@ -101,7 +101,7 @@ outputs:
   decision_build:
     description: |
       Should run the next step: such as build & test
-      Default value is: `!ci.isPushed && !isClosed`
+      Default value is: `!ci.isPushed && (!isClosed || !isMerged)`
   decision_publish:
     description: |
       Should publish artifact: such as push artifact to any registry: npm, docker, maven, pypi..
