@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Project context
         id: project_context
-        uses: zero88/gh-project-context@v1.0.0-rc
+        uses: zero88/gh-project-context@v1
 
   build:
     runs-on: ubuntu-latest
@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Project context
         id: project_context
-        uses: zero88/gh-project-context@v1.0.0-rc
+        uses: zero88/gh-project-context@v1
       - name: build sth
         ...
 ```
