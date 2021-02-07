@@ -126,7 +126,7 @@ export class ProjectContextOps {
   }
 
   makeDecision(output: GitContextOutput): Decision {
-    const build = !output.isClosed && !output.isMerged && !output.ci?.isPushed;
+    const build = !output.isClosed && !output.isMerged && !output.ci?.isPushed && !output.isAfterMergedReleasePR;
     const publish = build && (output.onDefaultBranch || output.isTag);
     return { build, publish };
   }

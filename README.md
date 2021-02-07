@@ -90,30 +90,30 @@ package?(-lock).json::("version"\s?:\s?)(")([^"]+)(")::2
 
 Project context based on current `GitHub event`
 
-| Name                   | Description                                                                                                                |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| branch                 | Current branch name or tag name                                                                                            |
-| onDefaultBranch        | Check whether current event is on default branch or not                                                                    |
-| isPR                   | Check whether current event is on pull request or not                                                                      |
-| isReleasePR            | Check whether current event is on release pull request or not                                                              |
-| isMerged               | Check whether current event is merged PR                                                                                   |
-| isClosed               | Check whether current event is close PR but not merged into target branch                                                  |
-| isAfterMergedReleasePR | Check whether current event is a merged commit after merged release pull request into default branch or not                |
-| isTag                  | Check whether current event is on ref tag                                                                                  |
-| commitMsg              | The latest commit message                                                                                                  |
-| commitId               | The latest commit id                                                                                                       |
-| version                | Current tag version or release version. Null if not tag or release pull request                                            |
-| ci_mustFixVersion      | CI: Need to fix version to match with release name                                                                         |
-| ci_needTag             | CI: Need to tag new version if release branch is merged                                                                    |
-| ci_isPushed            | CI: Check whether if auto commit is pushed to remote                                                                       |
-| ci_commitId            | CI: auto commit id                                                                                                         |
-| ci_commitMsg           | CI: auto commit message                                                                                                    |
-| decision_build         | Decision: Should run the next step: such as build & test. Default value: `!ci.isPushed && !isClosed && !isMerged`          |
-| decision_publish       | Should publish artifact: such as push artifact to any registry. Default value: `decision.build && (isOnMaster \|\| isTag)` |
-| ver_current            | Current version in config file                                                                                             |
-| ver_nextMajor          | Suggest next major version if after release and `ver_current` is compatible with semver                                    |
-| ver_nextMinor          | Suggest next minor version if after release and `ver_current` is compatible with semver                                    |
-| ver_nextPatch          | Suggest next patch version if after release and `ver_current` is compatible with semver                                    |
+| Name                   | Description                                                                                                                                  |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| branch                 | Current branch name or tag name                                                                                                              |
+| onDefaultBranch        | Check whether current event is on default branch or not                                                                                      |
+| isPR                   | Check whether current event is on pull request or not                                                                                        |
+| isReleasePR            | Check whether current event is on release pull request or not                                                                                |
+| isMerged               | Check whether current event is merged PR                                                                                                     |
+| isClosed               | Check whether current event is close PR but not merged into target branch                                                                    |
+| isAfterMergedReleasePR | Check whether current event is a merged commit after merged release pull request into default branch or not                                  |
+| isTag                  | Check whether current event is on ref tag                                                                                                    |
+| commitMsg              | The latest commit message                                                                                                                    |
+| commitId               | The latest commit id                                                                                                                         |
+| version                | Current tag version or release version                                                                                                       |
+| ci_mustFixVersion      | CI: Need to fix version to match with release name                                                                                           |
+| ci_needTag             | CI: Need to tag new version if release branch is merged                                                                                      |
+| ci_isPushed            | CI: Check whether if auto commit is pushed to remote                                                                                         |
+| ci_commitId            | CI: auto commit id                                                                                                                           |
+| ci_commitMsg           | CI: auto commit message                                                                                                                      |
+| decision_build         | Decision: Should run the next step: such as build & test. Default value: `!ci.isPushed && !isClosed && !isMerged && !isAfterMergedReleasePR` |
+| decision_publish       | Should publish artifact: such as push artifact to any registry. Default value: `decision.build && (isOnMaster \|\| isTag)`                   |
+| ver_current            | Current version in config file                                                                                                               |
+| ver_nextMajor          | Suggest next major version if after release and `ver_current` is compatible with semver                                                      |
+| ver_nextMinor          | Suggest next minor version if after release and `ver_current` is compatible with semver                                                      |
+| ver_nextPatch          | Suggest next patch version if after release and `ver_current` is compatible with semver                                                      |
 
 ## Use Cases
 

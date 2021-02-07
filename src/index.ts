@@ -21,7 +21,8 @@ function process(context: Context, ghInput: GitContextInput, interactorInput: Gi
   return ops.fixOrSearchVersion(ghOutput, dryRun)
             .then(r => ops.ciStep(r, ghOutput, dryRun))
             .then(output => ({ ...output, decision: ops.makeDecision(output) }))
-            .then(output => ({ ...output, ver: ops.nextVersion(output) }));
+            .then(output => ({ ...output, ver: ops.nextVersion(output) }))
+            .then(output => ({ ...output, version: output.ver.current }));
 }
 
 function addActionOutputs(ghOutput: GitContextOutput) {

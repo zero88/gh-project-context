@@ -87,7 +87,7 @@ outputs:
   commitId:
     description: 'The latest commit id'
   version:
-    description: 'Current tag version or release version. Null if not tag or release pull request'
+    description: 'Current tag version or release version'
   ci_mustFixVersion:
     description: 'CI: Need to fix version to match with release name'
   ci_needTag:
@@ -101,7 +101,7 @@ outputs:
   decision_build:
     description: |
       Should run the next step: such as build & test
-      Default value is: `!ci.isPushed && !isClosed && !isMerged`
+      Default value is: `!ci.isPushed && !isClosed && !isMerged && !isAfterMergedReleasePR`
   decision_publish:
     description: |
       Should publish artifact: such as push artifact to any registry: npm, docker, maven, pypi..
