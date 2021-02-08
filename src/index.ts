@@ -26,7 +26,7 @@ function process(context: Context, ghInput: GitContextInput, interactorInput: Gi
             .then(r => ops.ciStep(r, ghOutput, dryRun))
             .then(output => ({ ...output, decision: ops.makeDecision(output) }))
             .then(output => ({ ...output, ver: ops.nextVersion(output) }))
-            .then(output => ({ ...output, version: output.ver.current }));
+            .then(output => ops.tweakVersion(output));
 }
 
 function addActionOutputs(ghOutput: GitContextOutput) {
