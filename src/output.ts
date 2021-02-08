@@ -58,6 +58,11 @@ export interface GitContextOutput {
    */
   readonly commitId: string;
   /**
+   * Latest short commit id
+   * @type {string}
+   */
+  readonly shortCommitId: string;
+  /**
    * CI context
    */
   readonly ci?: CIContext;

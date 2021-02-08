@@ -1,7 +1,7 @@
 name: 'Project context'
 description: 'Build project context and synchronize project version'
 branding:
-  icon: 'activity'  
+  icon: 'activity'
   color: 'green'
 inputs:
   defaultBranch:
@@ -29,6 +29,10 @@ inputs:
       @(gradle|maven|pom|project).properties::(version\s?=\s?)(.+)::1
       @(application|version).yml::(version:\s)(.+)::1
       @(VERSION|version)?(.txt)::.+::0
+  shaLength:
+    description: 'Create output short commit id within length. Default is 7'
+    required: false
+    default: '7'
   allowCommit:
     description: 'CI: Allow git commit to fix version if not match'
     required: false
@@ -86,6 +90,8 @@ outputs:
     description: 'The latest commit message'
   commitId:
     description: 'The latest commit id'
+  shortCommitId:
+    description: 'The latest short commit id'
   version:
     description: 'Current tag version or release version'
   ci_mustFixVersion:

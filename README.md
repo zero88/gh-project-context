@@ -66,6 +66,7 @@ jobs:
 | releaseBranchPrefix   | Git Release Branch Prefix                                                                                       | false    | `release/`                                        |
 | mergedReleaseMsgRegex | Merged release message regex                                                                                    | false    | `^Merge pull request #[0-9]+ from .+/release/.+$` |
 | patterns              | Project patterns to search/replace a version.<br>E.g: `<glob_pattern_with_ext>::<regex_group>::<version_regex>` | false    | See [below](#default-pattern-input)               |
+| shaLength             | Create output short commit id within length                                                                     | false    | `7`                                               |
 | allowCommit           | CI: Allow git commit to fix version if not match                                                                | false    | `true`                                            |
 | allowTag              | CI: Allow git tag if merged release branch                                                                      | false    | `true`                                            |
 | userName              | CI: Username to commit                                                                                          | false    | `ci-bot`                                          |
@@ -102,6 +103,7 @@ Project context based on current `GitHub event`
 | isTag                  | Check whether current event is on ref tag                                                                                                    |
 | commitMsg              | The latest commit message                                                                                                                    |
 | commitId               | The latest commit id                                                                                                                         |
+| shortCommitId          | The latest short commit id                                                                                                                   |
 | version                | Current tag version or release version                                                                                                       |
 | ci_mustFixVersion      | CI: Need to fix version to match with release name                                                                                           |
 | ci_needTag             | CI: Need to tag new version if release branch is merged                                                                                      |

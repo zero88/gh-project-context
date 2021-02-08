@@ -32,13 +32,19 @@ export class GitContextInput {
    * @type {string}
    */
   readonly mergedReleaseMsgRegex: RegExp;
+  /**
+   * Commit id length
+   * @type {number}
+   */
+  readonly shaLength: number;
 
   constructor(defaultBranch?: string, tagPrefix?: string, releaseBranchPrefix?: string,
-              mergedReleaseMsg?: string) {
+              mergedReleaseMsg?: string, shaLength?: number) {
     this.defaultBranch = defaultBranch ?? GitContextInput.DEFAULT_BRANCH;
     this.tagPrefix = tagPrefix ?? GitContextInput.TAG_PREFIX;
     this.releaseBranchPrefix = releaseBranchPrefix ?? GitContextInput.RELEASE_BRANCH_PREFIX;
     this.mergedReleaseMsgRegex = new RegExp(mergedReleaseMsg ?? GitContextInput.MERGED_RELEASE_MSG_REGEX, 'gim');
+    this.shaLength = shaLength && !isNaN(shaLength) ? shaLength : 7;
   }
 }
 
@@ -61,11 +67,13 @@ export class GitContextOps {
     const isManualOrSchedule = event === 'schedule' || event === 'workflow_dispatch' || event === 'repository_dispatch';
     const isMerged = this.checkMerged(context, isPR);
     const isClosed = this.checkClosed(context, isPR);
+    const commitId = this.getCommitId(context, isPR, !isMerged);
+    const shortCommitId = this.getShortCommitId(commitId, this.ctxInput.shaLength)
     return {
       branch, onDefaultBranch, isPR, isReleasePR, isTag,
       isManualOrSchedule, isMerged, isClosed, commitMsg,
+      commitId, shortCommitId,
       version: this.getVersion(branch, isReleasePR, isTag),
-      commitId: this.getCommitId(context, isPR, !isMerged),
       isAfterMergedReleasePR: this.checkAfterMergedReleasePR(event, onDefaultBranch, commitMsg),
     };
   }
@@ -96,7 +104,11 @@ export class GitContextOps {
   }
 
   private getCommitId(context: Context, isPR: boolean, isNotMerged: boolean): string {
-    return isPR && isNotMerged ? context.payload.pull_request?.head?.sha : context.sha;
+    return isPR && isNotMerged ? context.payload.pull_request?.head?.sha ?? context.sha : context.sha;
+  }
+
+  private getShortCommitId(commitId: string, len: number): string {
+    return commitId.substring(0, len + 1);
   }
 
   private getVersion(branch: string, isReleasePR: boolean, isTag: boolean) {

@@ -6,12 +6,16 @@ import { GitContextOutput } from './output';
 import { ProjectContextOps } from './project';
 import { flatten } from './utils';
 
-function getInputBool(inputName, required: boolean = true) {
+function getInputBool(inputName: string, required: boolean = true): boolean {
   return Boolean(JSON.parse(core.getInput(inputName, { required })));
 }
 
-function getInputString(inputName, required: boolean = true) {
+function getInputString(inputName: string, required: boolean = true): string {
   return core.getInput(inputName, { required });
+}
+
+function getInputNumber(inputName: string, required: boolean = true): number {
+  return +core.getInput(inputName, { required });
 }
 
 function process(context: Context, ghInput: GitContextInput, interactorInput: GitInteractorInput,
@@ -37,7 +41,8 @@ function run(context: Context) {
   const ghInput = new GitContextInput(getInputString('defaultBranch'),
                                       getInputString('tagPrefix'),
                                       getInputString('releaseBranchPrefix'),
-                                      getInputString('mergedReleaseMsgRegex'));
+                                      getInputString('mergedReleaseMsgRegex'),
+                                      getInputNumber('shaLength'));
   const interactorInput = new GitInteractorInput(getInputBool('allowCommit'),
                                                  getInputBool('allowTag'),
                                                  getInputString('prefixCiMsg'),
