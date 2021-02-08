@@ -53,7 +53,7 @@ jobs:
 
 - Action output
 
-![Demo](.github/demo_context.png "Demo")
+![Demo](.github/demo.png "Demo")
 
 ## Input and Output
 
