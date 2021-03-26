@@ -156,7 +156,7 @@ export interface FileVersionResult {
 export class FileVersionParser {
 
   static findRegex(ext: string, versionPattern: string, group: number): [RegExp, number] {
-    if (versionPattern && versionPattern.trim().length === 0) {
+    if (versionPattern && versionPattern.trim().length !== 0) {
       return [new RegExp(versionPattern), group];
     }
     if (ext === '.json') {
