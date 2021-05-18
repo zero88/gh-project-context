@@ -57,7 +57,7 @@ function run(context: Context) {
                                                  getInputString('nextVerMsg'),
                                                  getInputString('nextVerMode'));
   const patterns = getInputString('patterns', false);
-  const dryRun = getInputBool('dry', true);
+  const dryRun = getInputBool('dry');
   process(context, ghInput, interactorInput, patterns, dryRun).then(ghOutput => addActionOutputs(ghOutput))
                                                               .catch(error => core.setFailed(error));
 }

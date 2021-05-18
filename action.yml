@@ -76,7 +76,7 @@ inputs:
   dry:
     description: 'CI: Dry run. If `true`, action will run without do modify files or git commit/tag'
     required: true
-    default: 'true'
+    default: 'false'
 outputs:
   branch:
     description: 'Current branch name or tag name'
