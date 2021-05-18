@@ -65,6 +65,14 @@ inputs:
     description: 'CI: Release version message template'
     required: false
     default: Release version
+  nextVerMsg:
+    description: 'CI: Next version message template'
+    required: false
+    default: Next version
+  nextVerMode:
+    description: 'CI: Next version mode to choose for upgrading version after merged release PR. One of: MAJOR|MINOR|PATCH|NONE'
+    required: false
+    default: NONE
   dry:
     description: 'CI: Dry run. If `true`, action will run without do modify files or git commit/tag'
     required: false

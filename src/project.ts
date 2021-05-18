@@ -122,7 +122,8 @@ export class ProjectContextOps {
     }
     const interactor = new GitInteractor();
     if (mustFixVersion) {
-      return interactor.commitPushIfNeed(this.iInput, ghOutput.branch, ghOutput.version, mustFixVersion, dryRun)
+      return interactor.commitPushIfCorrectVersion(this.iInput, ghOutput.branch, ghOutput.version, mustFixVersion,
+                                                   dryRun)
                        .then(ci => ({ ...ghOutput, ci, ver }));
     }
     if (ghOutput.isReleasePR && ghOutput.isMerged) {
@@ -159,6 +160,32 @@ export class ProjectContextOps {
       return new GitInteractor().removeRemoteBranch(output.branch).then(ignore => output);
     }
     return Promise.resolve(output);
+  }
+
+  upgradeVersion(output: GitContextOutput): Promise<GitContextOutput> {
+    if (!output.isAfterMergedReleasePR || !this.iInput.allowCommit || !output.ver ||
+        this.iInput.nextVerMode == 'NONE') {
+      return Promise.resolve(output);
+    }
+    let nextVer = this.iInput.nextVerMode === 'MAJOR' ? output.ver.nextMajor : null;
+    nextVer = this.iInput.nextVerMode === 'MINOR' ? output.ver.nextMinor : nextVer;
+    nextVer = this.iInput.nextVerMode === 'PATCH' ? output.ver.nextPath : nextVer;
+    if (!nextVer) {
+      core.warning('Unknown next version. Skip upgrade version');
+      return Promise.resolve(output);
+    }
+    if (nextVer === output.ver.current) {
+      core.info('Current version and next version are same. Skip upgrade version');
+      return Promise.resolve(output);
+    }
+    return this.fixOrSearchVersion({ ...output, version: nextVer }, false).then(r => {
+      if (r.isChanged) {
+        return new GitInteractor().commitThenPush(this.iInput,
+                                                  `${this.iInput.prefixCiMsg} ${this.iInput.nextVerMsg} ${nextVer}`)
+                                  .then(ignore => output);
+      }
+      return Promise.resolve(output);
+    });
   }
 }
 

@@ -27,7 +27,8 @@ function process(context: Context, ghInput: GitContextInput, interactorInput: Gi
             .then(output => ({ ...output, decision: ops.makeDecision(output) }))
             .then(output => ({ ...output, ver: ops.nextVersion(output) }))
             .then(output => ops.tweakVersion(output))
-            .then(output => ops.removeBranchIfNeed(output));
+            .then(output => ops.removeBranchIfNeed(output))
+            .then(output => ops.upgradeVersion(output));
 }
 
 function addActionOutputs(ghOutput: GitContextOutput) {
@@ -51,7 +52,9 @@ function run(context: Context) {
                                                  getInputString('releaseVerMsg'),
                                                  getInputString('userName'),
                                                  getInputString('userEmail'),
-                                                 getInputBool('mustSign'));
+                                                 getInputBool('mustSign'),
+                                                 getInputString('nextVerMsg'),
+                                                 getInputString('nextVerMode'));
   const patterns = getInputString('patterns', false);
   const dryRun = getInputBool('dry');
   process(context, ghInput, interactorInput, patterns, dryRun).then(ghOutput => addActionOutputs(ghOutput))

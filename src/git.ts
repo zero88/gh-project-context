@@ -131,6 +131,8 @@ export class GitContextOps {
   }
 }
 
+export type NextVersionMode = 'MAJOR' | 'MINOR' | 'PATCH' | 'NONE';
+
 /**
  * Represents for Git CI input
  */
@@ -139,6 +141,7 @@ export class GitInteractorInput {
   static readonly PREFIX_CI_MSG = '<ci-auto-commit>';
   static readonly CORRECT_VERSION_MSG = 'Correct version';
   static readonly RELEASE_VERSION_MSG = 'Release version';
+  static readonly NEXT_VERSION_MSG = 'Next version';
 
   /**
    * CI: Allow git commit to fix version if not match
@@ -180,9 +183,20 @@ export class GitInteractorInput {
    * @type {string}
    */
   readonly mustSign: boolean;
+  /**
+   * CI: Next version message template
+   * @type {string}
+   */
+  readonly nextVerMsg: string;
+  /**
+   * CI: Next version mode
+   * @type {NextVersionMode}
+   */
+  readonly nextVerMode: NextVersionMode;
 
   constructor(allowCommit: boolean, allowTag: boolean, prefixCiMsg: string, correctVerMsg: string,
-              releaseVerMsg: string, username: string, userEmail: string, isSign: boolean) {
+              releaseVerMsg: string, username: string, userEmail: string, isSign: boolean, nextVerMsg: string,
+              nextVerMode: string) {
     this.allowCommit = allowCommit ?? true;
     this.allowTag = allowTag ?? true;
     this.prefixCiMsg = prefixCiMsg ?? GitInteractorInput.PREFIX_CI_MSG;
@@ -191,6 +205,8 @@ export class GitInteractorInput {
     this.userName = username ?? 'ci-bot';
     this.userEmail = userEmail ?? 'actions@github.com';
     this.mustSign = isSign ?? false;
+    this.nextVerMsg = nextVerMsg ?? GitInteractorInput.NEXT_VERSION_MSG;
+    this.nextVerMode = (nextVerMode ?? 'NONE') as NextVersionMode;
   }
 }
 
@@ -199,8 +215,8 @@ export class GitInteractorInput {
  */
 export class GitInteractor {
 
-  commitPushIfNeed = async (iInput: GitInteractorInput, branch: string, version: string,
-                            mustFixVersion: boolean, dryRun: boolean): Promise<CIContext> => {
+  commitPushIfCorrectVersion = async (iInput: GitInteractorInput, branch: string, version: string,
+                                      mustFixVersion: boolean, dryRun: boolean): Promise<CIContext> => {
     const committable = iInput.allowCommit && mustFixVersion && !dryRun;
     let commitMsg = '';
     let commitId = '';
@@ -208,13 +224,19 @@ export class GitInteractor {
       commitMsg = `${iInput.prefixCiMsg} ${iInput.correctVerMsg} ${version}`;
       await strictExec('git', ['fetch', '--depth=1'], 'Cannot fetch');
       await strictExec('git', ['checkout', branch], 'Cannot checkout');
-      await this.globalConfig(iInput.userName, iInput.userEmail)
-                .then(gc => strictExec('git', [...gc, ...this.commitArgs(iInput, commitMsg)], `Cannot commit`));
-      await strictExec('git', ['show', '--shortstat', '--show-signature'], `Cannot show recently commit`, false);
-      await strictExec('git', ['push'], `Cannot push`, false);
-      commitId = (await strictExec('git', ['rev-parse', 'HEAD'], 'Cannot show last commit')).stdout;
+      commitId = await this.commitThenPush(iInput, commitMsg);
     }
     return Promise.resolve({ mustFixVersion, isPushed: committable, commitMsg, commitId });
+  };
+
+  commitThenPush = async (iInput: GitInteractorInput, commitMsg: string): Promise<string> => {
+    return this.globalConfig(iInput.userName, iInput.userEmail)
+               .then(gc => strictExec('git', [...gc, ...this.commitArgs(iInput, commitMsg)], `Cannot commit`))
+               .then(ignore => strictExec('git', ['show', '--shortstat', '--show-signature'],
+                                          `Cannot show recently commit`, false))
+               .then(ignore => strictExec('git', ['push'], `Cannot push`, false))
+               .then(ignore => strictExec('git', ['rev-parse', 'HEAD'], 'Cannot show last commit'))
+               .then(r => r.stdout);
   };
 
   tagThenPush = async (iInput: GitInteractorInput, gInput: GitContextInput, version: string, needTag: boolean,
