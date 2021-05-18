@@ -68,7 +68,7 @@ export class GitContextOps {
     const isMerged = this.checkMerged(context, isPR);
     const isClosed = this.checkClosed(context, isPR);
     const commitId = this.getCommitId(context, isPR, !isMerged);
-    const shortCommitId = this.getShortCommitId(commitId, this.ctxInput.shaLength)
+    const shortCommitId = this.getShortCommitId(commitId, this.ctxInput.shaLength);
     return {
       branch, onDefaultBranch, isPR, isReleasePR, isTag,
       isManualOrSchedule, isMerged, isClosed, commitMsg,
@@ -239,6 +239,10 @@ export class GitInteractor {
       await strictExec('git', ['push', '-uf', 'origin', v], `Cannot push`, false);
     }
     return Promise.resolve({ needTag, isPushed: taggable, commitMsg, commitId });
+  };
+
+  getCommitMsg = async (commitId: string): Promise<string> => {
+    return await exec('git', ['log', '--format=%B', '-n', '1', commitId]).then(r => r.success ? r.stdout : '');
   };
 
   private commitArgs(commitMsg: string) {

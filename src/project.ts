@@ -60,11 +60,11 @@ export class ProjectContextOps {
   static parse(patterns: string): ProjectContextInput[] {
     patterns = patterns ?? this.DEFAULT_PATTERNS;
     return patterns.split(/\r?\n/)
-      .reduce<string[]>((acc, line) => acc.concat(line.split(','))
-        .filter(pat => pat).map(pat => pat.trim()), [])
-      .map(item => item.split('::'))
-      .map(arr => ProjectContextOps.parseInput(arr))
-      .filter(input => input);
+                   .reduce<string[]>((acc, line) => acc.concat(line.split(','))
+                                                       .filter(pat => pat).map(pat => pat.trim()), [])
+                   .map(item => item.split('::'))
+                   .map(arr => ProjectContextOps.parseInput(arr))
+                   .filter(input => input);
   }
 
   private static parseInput(arr: string[]): ProjectContextInput {
@@ -83,27 +83,35 @@ export class ProjectContextOps {
     return glob.sync(pattern).filter(path => lstatSync(path).isFile());
   }
 
+  checkCommitMsg(ghOutput: GitContextOutput): Promise<GitContextOutput> {
+    if (ghOutput.commitMsg && ghOutput.commitMsg.trim().length > 0) {
+      return Promise.resolve(ghOutput);
+    }
+    return new GitInteractor(this.iInput, this.gInput).getCommitMsg(ghOutput.commitId)
+                                                      .then(commitMsg => ({ ...ghOutput, commitMsg }));
+  }
+
   fixOrSearchVersion(ghOutput: GitContextOutput, dryRun: boolean = true): Promise<FileVersionResult> {
     const version = ghOutput.version;
     if (!version || version.trim().length === 0) {
       core.info(`Searching version in file...`);
       return Promise.all(this.pInputs.map(input => FileVersionParser.search(input)))
-        .then(versions => versions.find(v => v))
-        .then(v => v || ghOutput.branch)
-        .then(v => {
-          core.info(`Version: ${v}`);
-          return { isChanged: false, version: v };
-        });
+                    .then(versions => versions.find(v => v))
+                    .then(v => v || ghOutput.branch)
+                    .then(v => {
+                      core.info(`Version: ${v}`);
+                      return { isChanged: false, version: v };
+                    });
     }
     core.info(`Fixing version to ${version}...`);
     return Promise.all(this.pInputs.map(input => FileVersionParser.replace(input, dryRun, version)))
-      .then(result => result.reduce((p, c) => p.concat(c), [])
-        .filter(r => r.hasChanged))
-      .then(r => {
-        const files = r.map(v => v.file);
-        core.info(`Fixed ${r.length} file(s): [${files}]`);
-        return { isChanged: r.length > 0, files };
-      });
+                  .then(result => result.reduce((p, c) => p.concat(c), [])
+                                        .filter(r => r.hasChanged))
+                  .then(r => {
+                    const files = r.map(v => v.file);
+                    core.info(`Fixed ${r.length} file(s): [${files}]`);
+                    return { isChanged: r.length > 0, files };
+                  });
   };
 
   ciStep(versionResult: FileVersionResult, ghOutput: GitContextOutput, dryRun: boolean): Promise<GitContextOutput> {
@@ -115,12 +123,12 @@ export class ProjectContextOps {
     const interactor = new GitInteractor(this.iInput, this.gInput);
     if (mustFixVersion) {
       return interactor.commitPushIfNeed(ghOutput.branch, ghOutput.version, mustFixVersion, dryRun)
-        .then(ci => ({ ...ghOutput, ci, ver }));
+                       .then(ci => ({ ...ghOutput, ci, ver }));
     }
     if (ghOutput.isReleasePR && ghOutput.isMerged) {
       core.info(`Tag new version ${ghOutput.version}...`);
       return interactor.tagThenPush(ghOutput.version, ghOutput.isMerged, dryRun)
-        .then(ci => ({ ...ghOutput, ci }));
+                       .then(ci => ({ ...ghOutput, ci }));
     }
     return Promise.resolve({ ...ghOutput, ver });
   }
@@ -186,7 +194,7 @@ export class FileVersionParser {
     }
     const g = shouldSkipFirst ? group + 1 : group;
     return matcher ? matcher.reduce((p, c, i) => shouldSkipFirst && i == 0 ? '' : p.concat(i === g ? expected : c), '')
-      : actual;
+                   : actual;
   }
 
   static searchMatch(actual: string, pattern: RegExp, group: number): string {

@@ -23,7 +23,7 @@ function process(context: Context, ghInput: GitContextInput, interactorInput: Gi
   const ops = ProjectContextOps.create(ghInput, interactorInput, patterns);
   const ghOutput = new GitContextOps(ghInput).parse(context);
   return ops.fixOrSearchVersion(ghOutput, dryRun)
-            .then(r => ops.ciStep(r, ghOutput, dryRun))
+            .then(r => ops.checkCommitMsg(ghOutput).then(output => ops.ciStep(r, output, dryRun)))
             .then(output => ({ ...output, decision: ops.makeDecision(output) }))
             .then(output => ({ ...output, ver: ops.nextVersion(output) }))
             .then(output => ops.tweakVersion(output));
