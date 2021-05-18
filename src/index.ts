@@ -6,16 +6,17 @@ import { GitContextOutput } from './output';
 import { ProjectContextOps } from './project';
 import { flatten } from './utils';
 
-function getInputBool(inputName: string, required: boolean = true): boolean {
-  return Boolean(JSON.parse(core.getInput(inputName, { required })));
+function getInputBool(inputName: string, _default: boolean = false): boolean {
+  let input = core.getInput(inputName);
+  return !input ? _default : Boolean(JSON.parse(input));
 }
 
-function getInputString(inputName: string, required: boolean = true): string {
-  return core.getInput(inputName, { required });
+function getInputString(inputName: string, _required: boolean = true): string {
+  return core.getInput(inputName, { required: _required });
 }
 
-function getInputNumber(inputName: string, required: boolean = true): number {
-  return +core.getInput(inputName, { required });
+function getInputNumber(inputName: string, _required: boolean = true): number {
+  return +core.getInput(inputName, { required: _required });
 }
 
 function process(context: Context, ghInput: GitContextInput, interactorInput: GitInteractorInput,
@@ -45,8 +46,8 @@ function run(context: Context) {
                                       getInputString('releaseBranchPrefix'),
                                       getInputString('mergedReleaseMsgRegex'),
                                       getInputNumber('shaLength'));
-  const interactorInput = new GitInteractorInput(getInputBool('allowCommit'),
-                                                 getInputBool('allowTag'),
+  const interactorInput = new GitInteractorInput(getInputBool('allowCommit', true),
+                                                 getInputBool('allowTag', true),
                                                  getInputString('prefixCiMsg'),
                                                  getInputString('correctVerMsg'),
                                                  getInputString('releaseVerMsg'),
@@ -56,7 +57,7 @@ function run(context: Context) {
                                                  getInputString('nextVerMsg'),
                                                  getInputString('nextVerMode'));
   const patterns = getInputString('patterns', false);
-  const dryRun = getInputBool('dry');
+  const dryRun = getInputBool('dry', true);
   process(context, ghInput, interactorInput, patterns, dryRun).then(ghOutput => addActionOutputs(ghOutput))
                                                               .catch(error => core.setFailed(error));
 }

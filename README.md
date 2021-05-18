@@ -11,7 +11,7 @@ It also verifies and corrects automatically Project version in metadata file in 
 
 - NodeJS: `package.json`
 - Java: Gradle with `gradle.properties`
-- Python: `Pipenv` or `Poetry` with `pyproject.toml`
+- Python: `Poetry` with `pyproject.toml` or `version.py`
 - Plain text: `VERSION.txt`
 - Or any version metadata file if you know some magical regex skill
 
@@ -74,8 +74,10 @@ jobs:
 | mustSign              | CI: Required GPG sign when git commit/tag                                                                       | false    | `false`                                           |
 | prefixCiMsg           | CI: Prefix bot message                                                                                          | false    | `<ci-auto-commit>`                                |
 | correctVerMsg         | CI: Correct version message template                                                                            | false    | `Correct version`                                 |
-| releaseVerMsg         | CI: Release version message template                                                                            | false    | `release/`                                        |
-| dry                   | CI: Dry run. If `true`, action will run without do modify files or git commit/tag                               | false    | `true`                                            |
+| releaseVerMsg         | CI: Release version message template                                                                            | false    | `Release version`                                 |
+| nextVerMsg            | CI: Next version message template                                                                               | false    | `Next version`                                    |
+| nextVerMode           | CI: Next version mode to choose for upgrading version after merged release PR. One of: MAJOR|MINOR|PATCH|NONE   | false    | `NONE`                                            |
+| dry                   | CI: Dry run. If `true`, action will run without do modify files or git commit/tag                               | false    | `false`                                           |
 
 #### Default Pattern Input
 
@@ -116,6 +118,22 @@ Project context based on current `GitHub event`
 | ver_nextMajor          | Suggest next major version if after release and `ver_current` is compatible with semver                                                      |
 | ver_nextMinor          | Suggest next minor version if after release and `ver_current` is compatible with semver                                                      |
 | ver_nextPatch          | Suggest next patch version if after release and `ver_current` is compatible with semver                                                      |
+
+## Note
+
+### Latest commit message
+
+`commitMsg` is not available by default when synchronize/open `pull-request`. 
+In case, you want to use the latest commit message in `pull-request`, need to tweak your build as below:
+
+```yaml
+- uses: actions/checkout@v2
+  with:
+    token: ${{ secrets.YOUR_GITHUB_TOKEN }}
+    fetch-depth: 2
+- uses: zero88/gh-project-context@v1.1
+```
+
 
 ## Use Cases
 
