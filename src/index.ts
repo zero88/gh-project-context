@@ -26,7 +26,8 @@ function process(context: Context, ghInput: GitContextInput, interactorInput: Gi
             .then(r => ops.checkCommitMsg(ghOutput).then(output => ops.ciStep(r, output, dryRun)))
             .then(output => ({ ...output, decision: ops.makeDecision(output) }))
             .then(output => ({ ...output, ver: ops.nextVersion(output) }))
-            .then(output => ops.tweakVersion(output));
+            .then(output => ops.tweakVersion(output))
+            .then(output => ops.removeBranchIfNeed(output));
 }
 
 function addActionOutputs(ghOutput: GitContextOutput) {

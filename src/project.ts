@@ -87,8 +87,8 @@ export class ProjectContextOps {
     if (ghOutput.commitMsg && ghOutput.commitMsg.trim().length > 0) {
       return Promise.resolve(ghOutput);
     }
-    return new GitInteractor(this.iInput, this.gInput).getCommitMsg(ghOutput.commitId)
-                                                      .then(commitMsg => ({ ...ghOutput, commitMsg }));
+    return new GitInteractor().getCommitMsg(ghOutput.commitId)
+                              .then(commitMsg => ({ ...ghOutput, commitMsg }));
   }
 
   fixOrSearchVersion(ghOutput: GitContextOutput, dryRun: boolean = true): Promise<FileVersionResult> {
@@ -120,14 +120,14 @@ export class ProjectContextOps {
     if (ghOutput.isTag && mustFixVersion) {
       throw `Git tag version doesn't meet with current version in files. Invalid files: [${versionResult.files}]`;
     }
-    const interactor = new GitInteractor(this.iInput, this.gInput);
+    const interactor = new GitInteractor();
     if (mustFixVersion) {
-      return interactor.commitPushIfNeed(ghOutput.branch, ghOutput.version, mustFixVersion, dryRun)
+      return interactor.commitPushIfNeed(this.iInput, ghOutput.branch, ghOutput.version, mustFixVersion, dryRun)
                        .then(ci => ({ ...ghOutput, ci, ver }));
     }
     if (ghOutput.isReleasePR && ghOutput.isMerged) {
       core.info(`Tag new version ${ghOutput.version}...`);
-      return interactor.tagThenPush(ghOutput.version, ghOutput.isMerged, dryRun)
+      return interactor.tagThenPush(this.iInput, this.gInput, ghOutput.version, ghOutput.isMerged, dryRun)
                        .then(ci => ({ ...ghOutput, ci }));
     }
     return Promise.resolve({ ...ghOutput, ver });
@@ -152,6 +152,13 @@ export class ProjectContextOps {
       return output;
     }
     return { ...output, ...{ version: output.ver?.current ?? output.version } };
+  }
+
+  removeBranchIfNeed(output: GitContextOutput): Promise<GitContextOutput> {
+    if (output.isPR && output.isMerged) {
+      return new GitInteractor().removeRemoteBranch(output.branch).then(ignore => output);
+    }
+    return Promise.resolve(output);
   }
 }
 
