@@ -33,7 +33,7 @@ function process(context: Context, ghInput: GitContextInput, interactorInput: Gi
 }
 
 async function addActionOutputs(ghOutput: GitContextOutput) {
-  const { ci, decision, ver, ...rest } = ghOutput;
+  const { ci, decision, ver, version, ...rest } = ghOutput;
   await core.group('Project context', async () => core.info(JSON.stringify(rest, Object.keys(rest).sort(), 2)));
   if (ver) {
     await core.group('Version context', async () => core.info(JSON.stringify(ver, undefined, 2)));

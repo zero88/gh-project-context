@@ -63,7 +63,7 @@ export class GitContextOps {
     const isTag = this.checkTag(event, context.ref);
     const isPR = this.checkPR(event);
     const branch = this.parseBranch(context, isPR, isTag);
-    const onDefaultBranch = this.checkDefBranch(event, context.ref);
+    const onDefaultBranch = this.checkDefBranch(event, context.ref, context.payload.repository?.default_branch);
     const isReleasePR = this.checkReleasePR(event, branch);
     const isManualOrSchedule = event === 'schedule' || event === 'workflow_dispatch' || event === 'repository_dispatch';
     const isMerged = this.checkMerged(context, isPR);
@@ -84,8 +84,9 @@ export class GitContextOps {
       : context.ref.replace(isTag ? 'refs/tags/' : 'refs/heads/', '');
   }
 
-  private checkDefBranch(event: string, ref: string): boolean {
-    return event === 'push' && ref === `refs/heads/${this.ctxInput.defaultBranch}`;
+  private checkDefBranch(event: string, ref: string, defaultBranch?:string): boolean {
+    const db = defaultBranch ?? this.ctxInput.defaultBranch;
+    return event === 'push' && ref === `refs/heads/${db}`;
   }
 
   private checkPR(event: string): boolean {
