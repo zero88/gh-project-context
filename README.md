@@ -60,7 +60,7 @@ jobs:
 ### Input
 
 | Name                  | Description                                                                                                     | Required | Default value                                     |
-| --------------------- | --------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------- |
+|-----------------------|-----------------------------------------------------------------------------------------------------------------|----------|---------------------------------------------------|
 | defaultBranch         | Project default branch                                                                                          | false    | `main`                                            |
 | tagPrefix             | Tag Prefix                                                                                                      | false    | `v`                                               |
 | releaseBranchPrefix   | Git Release Branch Prefix                                                                                       | false    | `release/`                                        |
@@ -76,7 +76,7 @@ jobs:
 | correctVerMsg         | CI: Correct version message template                                                                            | false    | `Correct version`                                 |
 | releaseVerMsg         | CI: Release version message template                                                                            | false    | `Release version`                                 |
 | nextVerMsg            | CI: Next version message template                                                                               | false    | `Next version`                                    |
-| nextVerMode           | CI: Next version mode to choose for upgrading version after merged release PR. One of: MAJOR|MINOR|PATCH|NONE   | false    | `NONE`                                            |
+| nextVerMode           | CI: Next version mode to choose for upgrading version after merged release PR. One of: MAJOR,MINOR,PATCH,NONE   | false    | `NONE`                                            |
 | dry                   | CI: Dry run. If `true`, action will run without do modify files or git commit/tag                               | false    | `false`                                           |
 
 #### Default Pattern Input
@@ -94,7 +94,7 @@ package?(-lock).json::("version"\s?:\s?)(")([^"]+)(")::2
 Project context based on current `GitHub event`
 
 | Name                   | Description                                                                                                                                  |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
 | branch                 | Current branch name or tag name                                                                                                              |
 | onDefaultBranch        | Check whether current event is on default branch or not                                                                                      |
 | isPR                   | Check whether current event is on pull request or not                                                                                        |
@@ -113,7 +113,7 @@ Project context based on current `GitHub event`
 | ci_commitId            | CI: auto commit id                                                                                                                           |
 | ci_commitMsg           | CI: auto commit message                                                                                                                      |
 | decision_build         | Decision: Should run the next step: such as build & test. Default value: `!ci.isPushed && !isClosed && !isMerged && !isAfterMergedReleasePR` |
-| decision_publish       | Should publish artifact: such as push artifact to any registry. Default value: `decision.build && (isOnMaster \|\| isTag)`                   |
+| decision_publish       | Should publish artifact: such as push artifact to any registry. Default value: `decision.build and (isOnMaster or isTag)`                    |
 | ver_current            | Current version in config file                                                                                                               |
 | ver_nextMajor          | Suggest next major version if after release and `ver_current` is compatible with semver                                                      |
 | ver_nextMinor          | Suggest next minor version if after release and `ver_current` is compatible with semver                                                      |
@@ -123,8 +123,8 @@ Project context based on current `GitHub event`
 
 ### Latest commit message
 
-`commitMsg` is not available by default when synchronize/open `pull-request`. 
-In case, you want to use the latest commit message in `pull-request`, need to tweak your build as below:
+`commitMsg` is not available by default when synchronize/open `pull-request`. In case, you want to use the latest commit
+message in `pull-request`, need to tweak your build as below:
 
 ```yaml
 - uses: actions/checkout@v2
@@ -133,7 +133,6 @@ In case, you want to use the latest commit message in `pull-request`, need to tw
     fetch-depth: 2
 - uses: zero88/gh-project-context@v1.1
 ```
-
 
 ## Use Cases
 

@@ -14,12 +14,12 @@ export interface ProjectContextInput {
    */
   readonly files: string[];
   /**
-   * File ext
+   * The file ext
    * @type {string}
    */
   readonly ext: string;
   /**
-   * Version pattern to find and replace
+   * The version pattern to find and replace
    * @type {string}
    */
   readonly pattern: RegExp;
@@ -60,11 +60,10 @@ export class ProjectContextOps {
   static parse(patterns: string): ProjectContextInput[] {
     patterns = patterns ?? this.DEFAULT_PATTERNS;
     return patterns.split(/\r?\n/)
-                   .reduce<string[]>((acc, line) => acc.concat(line.split(','))
-                                                       .filter(pat => pat).map(pat => pat.trim()), [])
-                   .map(item => item.split('::'))
-                   .map(arr => ProjectContextOps.parseInput(arr))
-                   .filter(input => input);
+      .reduce<string[]>((acc, line) => acc.concat(line.split(',')).filter(pat => pat).map(pat => pat.trim()), [])
+      .map(item => item.split('::'))
+      .map(arr => ProjectContextOps.parseInput(arr))
+      .filter(ctx => ctx);
   }
 
   private static parseInput(arr: string[]): ProjectContextInput {
@@ -88,7 +87,7 @@ export class ProjectContextOps {
       return Promise.resolve(ghOutput);
     }
     return new GitInteractor().getCommitMsg(ghOutput.commitId)
-                              .then(commitMsg => ({ ...ghOutput, commitMsg }));
+      .then(commitMsg => ({ ...ghOutput, commitMsg }));
   }
 
   fixOrSearchVersion(ghOutput: GitContextOutput, dryRun: boolean = true): Promise<FileVersionResult> {
@@ -96,22 +95,22 @@ export class ProjectContextOps {
     if (!version || version.trim().length === 0) {
       core.info(`Searching version in file...`);
       return Promise.all(this.pInputs.map(input => FileVersionParser.search(input)))
-                    .then(versions => versions.find(v => v))
-                    .then(v => v || ghOutput.branch)
-                    .then(v => {
-                      core.info(`Version: ${v}`);
-                      return { isChanged: false, version: v };
-                    });
+        .then(versions => versions.find(v => v))
+        .then(v => v ?? ghOutput.branch)
+        .then(v => {
+          core.info(`Version: ${v}`);
+          return { isChanged: false, version: v };
+        });
     }
     core.info(`Fixing version to ${version}...`);
     return Promise.all(this.pInputs.map(input => FileVersionParser.replace(input, dryRun, version)))
-                  .then(result => result.reduce((p, c) => p.concat(c), [])
-                                        .filter(r => r.hasChanged))
-                  .then(r => {
-                    const files = r.map(v => v.file);
-                    core.info(`Fixed ${r.length} file(s): [${files}]`);
-                    return { isChanged: r.length > 0, files };
-                  });
+      .then(result => result.reduce((p, c) => p.concat(c), [])
+        .filter(r => r.hasChanged))
+      .then(r => {
+        const files = r.map(v => v.file);
+        core.info(`Fixed ${r.length} file(s): [${files}]`);
+        return { isChanged: r.length > 0, files };
+      });
   };
 
   ciStep(versionResult: FileVersionResult, ghOutput: GitContextOutput, dryRun: boolean): Promise<GitContextOutput> {
@@ -123,13 +122,13 @@ export class ProjectContextOps {
     const interactor = new GitInteractor();
     if (mustFixVersion) {
       return interactor.commitPushIfCorrectVersion(this.iInput, ghOutput.branch, ghOutput.version, mustFixVersion,
-                                                   dryRun)
-                       .then(ci => ({ ...ghOutput, ci, ver }));
+        dryRun)
+        .then(ci => ({ ...ghOutput, ci, ver }));
     }
     if (ghOutput.isReleasePR && ghOutput.isMerged) {
       core.info(`Tag new version ${ghOutput.version}...`);
       return interactor.tagThenPush(this.iInput, this.gInput, ghOutput.version, ghOutput.isMerged, dryRun)
-                       .then(ci => ({ ...ghOutput, ci }));
+        .then(ci => ({ ...ghOutput, ci }));
     }
     return Promise.resolve({ ...ghOutput, ver });
   }
@@ -181,8 +180,8 @@ export class ProjectContextOps {
     return this.fixOrSearchVersion({ ...output, version: nextVer }, false).then(r => {
       if (r.isChanged) {
         return new GitInteractor().commitThenPush(this.iInput,
-                                                  `${this.iInput.prefixCiMsg} ${this.iInput.nextVerMsg} ${nextVer}`)
-                                  .then(ignore => output);
+          `${this.iInput.prefixCiMsg} ${this.iInput.nextVerMsg} ${nextVer}`)
+          .then(ignore => output);
       }
       return Promise.resolve(output);
     });
@@ -228,7 +227,7 @@ export class FileVersionParser {
     }
     const g = shouldSkipFirst ? group + 1 : group;
     return matcher ? matcher.reduce((p, c, i) => shouldSkipFirst && i == 0 ? '' : p.concat(i === g ? expected : c), '')
-                   : actual;
+      : actual;
   }
 
   static searchMatch(actual: string, pattern: RegExp, group: number): string {

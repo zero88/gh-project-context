@@ -40,7 +40,7 @@ export class GitContextInput {
   readonly shaLength: number;
 
   constructor(defaultBranch?: string, tagPrefix?: string, releaseBranchPrefix?: string,
-              mergedReleaseMsg?: string, shaLength?: number) {
+    mergedReleaseMsg?: string, shaLength?: number) {
     this.defaultBranch = defaultBranch ?? GitContextInput.DEFAULT_BRANCH;
     this.tagPrefix = tagPrefix ?? GitContextInput.TAG_PREFIX;
     this.releaseBranchPrefix = releaseBranchPrefix ?? GitContextInput.RELEASE_BRANCH_PREFIX;
@@ -81,7 +81,7 @@ export class GitContextOps {
 
   private parseBranch(context: Context, isPR: boolean, isTag: boolean): string {
     return isPR ? context.payload.pull_request?.head?.ref
-                : context.ref.replace(isTag ? 'refs/tags/' : 'refs/heads/', '');
+      : context.ref.replace(isTag ? 'refs/tags/' : 'refs/heads/', '');
   }
 
   private checkDefBranch(event: string, ref: string): boolean {
@@ -195,8 +195,8 @@ export class GitInteractorInput {
   readonly nextVerMode: NextVersionMode;
 
   constructor(allowCommit: boolean, allowTag: boolean, prefixCiMsg: string, correctVerMsg: string,
-              releaseVerMsg: string, username: string, userEmail: string, isSign: boolean, nextVerMsg: string,
-              nextVerMode: string) {
+    releaseVerMsg: string, username: string, userEmail: string, isSign: boolean, nextVerMsg: string,
+    nextVerMode: string) {
     this.allowCommit = allowCommit ?? true;
     this.allowTag = allowTag ?? true;
     this.prefixCiMsg = prefixCiMsg ?? GitInteractorInput.PREFIX_CI_MSG;
@@ -216,7 +216,7 @@ export class GitInteractorInput {
 export class GitInteractor {
 
   commitPushIfCorrectVersion = async (iInput: GitInteractorInput, branch: string, version: string,
-                                      mustFixVersion: boolean, dryRun: boolean): Promise<CIContext> => {
+    mustFixVersion: boolean, dryRun: boolean): Promise<CIContext> => {
     const committable = iInput.allowCommit && mustFixVersion && !dryRun;
     let commitMsg = '';
     let commitId = '';
@@ -231,16 +231,16 @@ export class GitInteractor {
 
   commitThenPush = async (iInput: GitInteractorInput, commitMsg: string): Promise<string> => {
     return this.globalConfig(iInput.userName, iInput.userEmail)
-               .then(gc => strictExec('git', [...gc, ...this.commitArgs(iInput, commitMsg)], `Cannot commit`))
-               .then(ignore => strictExec('git', ['show', '--shortstat', '--show-signature'],
-                                          `Cannot show recently commit`, false))
-               .then(ignore => strictExec('git', ['push'], `Cannot push`, false))
-               .then(ignore => strictExec('git', ['rev-parse', 'HEAD'], 'Cannot show last commit'))
-               .then(r => r.stdout);
+      .then(gc => strictExec('git', [...gc, ...this.commitArgs(iInput, commitMsg)], `Cannot commit`))
+      .then(ignore => strictExec('git', ['show', '--shortstat', '--show-signature'],
+        `Cannot show recently commit`, false))
+      .then(ignore => strictExec('git', ['push'], `Cannot push`, false))
+      .then(ignore => strictExec('git', ['rev-parse', 'HEAD'], 'Cannot show last commit'))
+      .then(r => r.stdout);
   };
 
   tagThenPush = async (iInput: GitInteractorInput, gInput: GitContextInput, version: string, needTag: boolean,
-                       dryRun: boolean): Promise<CIContext> => {
+    dryRun: boolean): Promise<CIContext> => {
     const taggable = iInput.allowTag && needTag && !dryRun;
     const v = `${gInput.tagPrefix}${version}`;
     let commitMsg = '';
@@ -250,15 +250,14 @@ export class GitInteractor {
       commitId = (await strictExec('git', ['rev-parse', '--short', 'HEAD'], 'Cannot show last commit')).stdout;
       await strictExec('git', ['fetch', '--depth=1'], 'Cannot fetch');
       await this.globalConfig(iInput.userName, iInput.userEmail)
-                .then(gc => strictExec('git', [...gc, ...this.tagArgs(iInput, commitMsg, v, commitId)], `Cannot tag`));
+        .then(gc => strictExec('git', [...gc, ...this.tagArgs(iInput, commitMsg, v, commitId)], `Cannot tag`));
       await strictExec('git', ['show', '--shortstat', '--show-signature', v], `Cannot show tag`, false);
       await strictExec('git', ['push', '-uf', 'origin', v], `Cannot push`, false);
     }
     return Promise.resolve({ needTag, isPushed: taggable, commitMsg, commitId });
   };
 
-  getCommitMsg = async (commitId: string): Promise<string> => this.execSilent(['log', '--format=%B', '-n', '1',
-                                                                               commitId]);
+  getCommitMsg = async (sha: string): Promise<string> => this.execSilent(['log', '--format=%B', '-n', '1', sha]);
 
   removeRemoteBranch = async (branch: string): Promise<string> => this.execSilent(['push', 'origin', `:${branch}`]);
 
