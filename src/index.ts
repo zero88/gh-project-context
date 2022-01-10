@@ -36,13 +36,14 @@ async function addActionOutputs(ghOutput: GitContextOutput) {
   const { ci, decision, ver, version, ...rest } = ghOutput;
   await core.group('Project context', async () => core.info(JSON.stringify(rest, Object.keys(rest).sort(), 2)));
   if (ver) {
-    await core.group('Version context', async () => core.info(JSON.stringify(ver, undefined, 2)));
+    await core.group('Version context', async () => core.info(JSON.stringify({ ...ver, version }, undefined, 2)));
   }
   if (ci) {
     await core.group('CI context', async () => core.info(JSON.stringify(ci, Object.keys(ci).sort(), 2)));
   }
   await core.group('CI decision', async () => core.info(JSON.stringify(decision, undefined, 2)));
   const outputs = flatten(ghOutput);
+  await core.group('Action Output', async () => core.info(JSON.stringify(outputs, Object.keys(outputs).sort(), 2)));
   Object.keys(outputs).forEach(k => core.setOutput(k, outputs[k]));
 }
 
