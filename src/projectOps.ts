@@ -5,7 +5,7 @@ import { GitParser, GitParserConfig } from './gitParser';
 import { CIContext, Decision, ProjectContext, Versions } from './projectContext';
 import { RuntimeContext } from './runtimeContext';
 import { isEmpty } from './utils';
-import { VersionParser } from './versionParser';
+import { VersionPatternParser } from './versionPatternParser';
 import { createVersions, getNextVersion, VersionResult, VersionStrategy } from './versionStrategy';
 
 export type ProjectConfig = {
@@ -57,14 +57,14 @@ export class ProjectOps {
 
   private async searchVersion(branch: string): Promise<VersionResult> {
     core.info(`Searching version in file...`);
-    const r = await VersionParser.search(this.projectConfig.versionStrategy.versionPatterns, branch);
+    const r = await VersionPatternParser.search(this.projectConfig.versionStrategy.versionPatterns, branch);
     core.info(`Current Version: ${r.version}`);
     return r;
   }
 
   private async fixVersion(expectedVersion: string, dryRun: boolean): Promise<VersionResult> {
     core.info(`Fixing version to ${expectedVersion}...`);
-    const r = await VersionParser.replace(this.projectConfig.versionStrategy.versionPatterns, expectedVersion, dryRun);
+    const r = await VersionPatternParser.replace(this.projectConfig.versionStrategy.versionPatterns, expectedVersion, dryRun);
     core.info(`Fixed ${r.files?.length} file(s): [${r.files}]`);
     return r;
   }

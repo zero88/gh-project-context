@@ -3,9 +3,12 @@ import { createGitParserConfig, GitParser } from '../src/gitParser';
 import { RuntimeContext } from '../src/runtimeContext';
 import * as onMergedPRContext from './resources/github/@action.gh.pr.merged.json';
 import * as onOpenPRContext from './resources/github/@action.gh.pr.open.json';
+import * as onPushAfterMergeReleaseContext from './resources/github/@action.gh.push.after.mergeRelease.json';
 import * as onPushOnDefaultContext from './resources/github/@action.gh.push.json';
 import * as onCloseReleasePRContext from './resources/github/@action.gh.release.pr.closed.json';
+import * as onMergeReleasePRContext from './resources/github/@action.gh.release.pr.merged.json';
 import * as onOpenReleasePRContext from './resources/github/@action.gh.release.pr.open.json';
+import * as onTagContext from './resources/github/@action.gh.tag.json';
 
 const originalContext = { ...github.context };
 
@@ -109,13 +112,69 @@ const expectedOpenReleasePR = {
   },
 };
 
+const expectedOnMergedReleasePR = {
+  'branch': 'release/1.0.6',
+  'commitId': '1584df028b7f4c1d87327da577c2d465f147134f',
+  'commitMsg': undefined,
+  'isAfterMergedReleasePR': false,
+  'isClosed': false,
+  'isManualOrSchedule': false,
+  'isMerged': true,
+  'isPR': true,
+  'isReleasePR': true,
+  'isTag': false,
+  'onDefaultBranch': false,
+  'shortCommitId': '1584df02',
+  'versions': {
+    'branch': '1.0.6',
+  },
+};
+
+const expectedOnPushAfterMergeReleasePR = {
+  'branch': 'main',
+  'commitId': '1584df028b7f4c1d87327da577c2d465f147134f',
+  'commitMsg': 'Merge pull request #16 from zero88/release/1.0.6\n\nUpdate README.md',
+  'isAfterMergedReleasePR': true,
+  'isClosed': false,
+  'isManualOrSchedule': false,
+  'isMerged': false,
+  'isPR': false,
+  'isReleasePR': false,
+  'isTag': false,
+  'onDefaultBranch': true,
+  'shortCommitId': '1584df02',
+  'versions': {
+    'branch': 'main',
+  },
+};
+const expectedOnTag = {
+  'branch': 'v1.0.6',
+  'commitId': '1584df028b7f4c1d87327da577c2d465f147134f',
+  'commitMsg': 'Merge pull request #16 from zero88/release/1.0.6\n\nUpdate README.md',
+  'isAfterMergedReleasePR': false,
+  'isClosed': false,
+  'isManualOrSchedule': false,
+  'isMerged': false,
+  'isPR': false,
+  'isReleasePR': false,
+  'isTag': true,
+  'onDefaultBranch': false,
+  'shortCommitId': '1584df02',
+  'versions': {
+    'branch': '1.0.6',
+  },
+};
+
 test.each`
-  label                               | file                          | expected
-  ${`On Push On default branch`}      | ${onPushOnDefaultContext}     | ${expectedOnPush}
-  ${`On Open normal Pull Request`}    | ${onOpenPRContext}            | ${expectedOpenPR}
-  ${`On Merge normal Pull Request`}   | ${onMergedPRContext}          | ${expectedMergedPR}
-  ${`On Close Release Pull Request`}  | ${onCloseReleasePRContext}    | ${expectedOnClosedReleasePR}
-  ${`On Open Release Pull Request`}   | ${onOpenReleasePRContext}     | ${expectedOpenReleasePR}
+  label                               | file                              | expected
+  ${`On Push On default branch`}      | ${onPushOnDefaultContext}         | ${expectedOnPush}
+  ${`On Open normal Pull Request`}    | ${onOpenPRContext}                | ${expectedOpenPR}
+  ${`On Merge normal Pull Request`}   | ${onMergedPRContext}              | ${expectedMergedPR}
+  ${`On Close Release Pull Request`}  | ${onCloseReleasePRContext}        | ${expectedOnClosedReleasePR}
+  ${`On Open Release Pull Request`}   | ${onOpenReleasePRContext}         | ${expectedOpenReleasePR}
+  ${`On Merge Release Pull Request`}  | ${onMergeReleasePRContext}        | ${expectedOnMergedReleasePR}
+  ${`On Push After merged release`}   | ${onPushAfterMergeReleaseContext} | ${expectedOnPushAfterMergeReleasePR}
+  ${`On Tag`}                         | ${onTagContext}                   | ${expectedOnTag}
 `(`parse [$label]`, ({ file, expected }: { file: string, expected: RuntimeContext }) => {
   Object.defineProperty(github, 'context', { value: file });
   const runtime = new GitParser(createGitParserConfig()).parse(github.context);

@@ -23,21 +23,21 @@ test('flatten output', () => {
                             '}');
   const output = flatten(sample);
   expect(output).toEqual({
-                           branch: 'release/1.0.1',
-                           onDefaultBranch: false,
-                           isPR: true,
-                           isReleasePR: true,
-                           isTag: false,
-                           isManualOrSchedule: false,
-                           isMerged: true,
-                           isClosed: false,
-                           version: '1.0.1',
-                           commitId: '6157d54403f7ad923e816e3c61b7366cb483ec35',
-                           isAfterMergedReleasePR: false,
-                           'ci_mustFixVersion': false,
-                           'ci_needTag': true,
-                           'ci_isPushed': true,
-                           'ci_commitMsg': 'Release version v1.0.1',
-                           'ci_commitId': '6157d54',
-                         });
+    branch: 'release/1.0.1',
+    onDefaultBranch: false,
+    isPR: true,
+    isReleasePR: true,
+    isTag: false,
+    isManualOrSchedule: false,
+    isMerged: true,
+    isClosed: false,
+    version: '1.0.1',
+    commitId: '6157d54403f7ad923e816e3c61b7366cb483ec35',
+    isAfterMergedReleasePR: false,
+    'ci_mustFixVersion': false,
+    'ci_needTag': true,
+    'ci_isPushed': true,
+    'ci_commitMsg': 'Release version v1.0.1',
+    'ci_commitId': '6157d54',
+  });
 });

@@ -46,7 +46,7 @@ const search = (pattern: VersionPattern): Promise<string> => {
   return replaceInFile(config).then(_ => versions.find(v => v) ?? '');
 };
 
-export const VersionParser = {
+export const VersionPatternParser = {
   replace: (versionPatterns: VersionPattern[], version: string, dryRun: boolean): Promise<VersionResult> =>
     Promise.all(versionPatterns.map(pattern => replace(pattern, version, dryRun)))
       .then(result => result.reduce((p, n) => mergeVersionResult(p, n))),

@@ -1,10 +1,10 @@
-import { VersionParser } from '../src/versionParser';
+import { VersionPatternParser } from '../src/versionPatternParser';
 import { createVersionStrategy } from '../src/versionStrategy';
 
 const test_version_parser = async (patterns: string, next: string, expected: {} | string) => {
   const inputs = createVersionStrategy(patterns).versionPatterns;
   expect(inputs.length).toEqual(1);
-  expect(await VersionParser.replace(inputs, next, true)).toEqual(expected);
+  expect(await VersionPatternParser.replace(inputs, next, true)).toEqual(expected);
 };
 
 describe('Fix version', () => {

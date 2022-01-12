@@ -24,9 +24,17 @@ export interface VersionPattern {
    * @type {string}
    */
   readonly pattern: RegExp;
-
+  /**
+   * The version group
+   */
   readonly group: number;
 
+}
+
+export interface VersionExternalCLI {
+  readonly externalCLI: string[];
+  readonly searchCommand: string;
+  readonly fixCommand: string;
 }
 
 export type VersionStrategy = {
@@ -36,6 +44,10 @@ export type VersionStrategy = {
    */
   readonly nextVersionMode: NextVersionMode;
 
+  /**
+   * Version patterns
+   * @type {NextVersionMode}
+   */
   readonly versionPatterns: VersionPattern[];
 }
 
@@ -51,7 +63,7 @@ export const mergeVersionResult = (prev: VersionResult, next: VersionResult): Ve
   version: next.version ?? prev.version,
 });
 
-export const DEFAULT_PATTERNS = `pyproject.toml::(version\\s?=\\s?)(")([^"]+)(")::2
+const DEFAULT_PATTERNS = `pyproject.toml::(version\\s?=\\s?)(")([^"]+)(")::2
   package?(-lock).json::("version"\\s?:\\s?)(")([^"]+)(")::2
   @(gradle|maven|pom|project).properties::(version\\s?=\\s?)(.+)::1
   @(application|version).yml::(version:\\s)(.+)::1
@@ -59,7 +71,7 @@ export const DEFAULT_PATTERNS = `pyproject.toml::(version\\s?=\\s?)(")([^"]+)(")
   `;
 
 const findRegex = (ext: string, versionPattern: string, group: number): [RegExp, number] => {
-  if (versionPattern && versionPattern.trim().length !== 0) {
+  if (!isEmpty(versionPattern)) {
     return [new RegExp(versionPattern), group];
   }
   if (ext === '.json') {
@@ -77,7 +89,7 @@ const findRegex = (ext: string, versionPattern: string, group: number): [RegExp,
   return [new RegExp(/.+/), 0];
 };
 
-const parseInput = (arr: string[]): VersionPattern => {
+const parseVersionPattern = (arr: string[]): VersionPattern => {
   const files = isEmpty(arr[0]) ? [] : glob.sync(arr[0]).filter(path => lstatSync(path).isFile());
   if (isEmpty(files)) {
     return <VersionPattern><unknown>null;
@@ -89,16 +101,16 @@ const parseInput = (arr: string[]): VersionPattern => {
   return { files, ext, pattern: regex[0], group: regex[1] };
 };
 
-const parse = (patterns?: string): VersionPattern[] =>
+const parseVersionsPatterns = (patterns?: string): VersionPattern[] =>
   (patterns ?? DEFAULT_PATTERNS).split(/\r?\n/)
     .reduce<string[]>((acc, line) => acc.concat(line.split(',')).filter(pat => pat).map(pat => pat.trim()), [])
     .map(item => item.split('::'))
-    .map(arr => parseInput(arr))
+    .map(arr => parseVersionPattern(arr))
     .filter(ctx => ctx);
 
 export const createVersionStrategy = (filePatterns?: string, nextMode?: string | NextVersionMode): VersionStrategy => ({
   nextVersionMode: ['MAJOR', 'MINOR', 'PATCH', 'NONE'].includes(nextMode ?? '') ? <NextVersionMode>nextMode : 'NONE',
-  versionPatterns: parse(filePatterns),
+  versionPatterns: parseVersionsPatterns(filePatterns),
 });
 
 export const createVersions = (runtime: RuntimeVersions, current: string, isGenNext: boolean = false): Versions => {
