@@ -1,60 +1,48 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { Context } from '@actions/github/lib/context';
-import { GitContextInput, GitContextOps, GitInteractorInput } from './git';
-import { GitContextOutput } from './output';
-import { ProjectContextOps } from './project';
+import { createGitOpsConfig } from './gitOps';
+import { createGitParserConfig } from './gitParser';
+import { ProjectContext } from './projectContext';
+import { ProjectOps } from './projectOps';
 import { flatten } from './utils';
+import { createVersionStrategy } from './versionStrategy';
 
-function getInputBool(inputName: string, _default: boolean = false): boolean {
-  let input = core.getInput(inputName);
+const getInputBool = (inputName: string, _default: boolean = false): boolean => {
+  const input = core.getInput(inputName);
   return !input ? _default : Boolean(JSON.parse(input));
-}
+};
 
-function getInputString(inputName: string, _required: boolean = true): string {
-  return core.getInput(inputName, { required: _required });
-}
+const getInputString = (inputName: string, required: boolean = true): string => core.getInput(inputName, { required });
 
-function getInputNumber(inputName: string, _required: boolean = true): number {
-  return +core.getInput(inputName, { required: _required });
-}
+const getInputNumber = (inputName: string, required: boolean = true): number => +core.getInput(inputName, { required });
 
-function process(context: Context, ghInput: GitContextInput, interactorInput: GitInteractorInput,
-  patterns: string, dryRun: boolean): Promise<GitContextOutput> {
-  const ops = ProjectContextOps.create(ghInput, interactorInput, patterns);
-  const ghOutput = new GitContextOps(ghInput).parse(context);
-  return ops.fixOrSearchVersion(ghOutput, dryRun)
-    .then(r => ops.checkCommitMsg(ghOutput).then(output => ops.ciStep(r, output, dryRun)))
-    .then(output => ({ ...output, decision: ops.makeDecision(output) }))
-    .then(output => ({ ...output, ver: ops.nextVersion(output) }))
-    .then(output => ops.tweakVersion(output))
-    .then(output => ops.removeBranchIfNeed(output))
-    .then(output => ops.upgradeVersion(output));
-}
-
-async function addActionOutputs(ghOutput: GitContextOutput) {
-  const { ci, decision, ver, version, ...rest } = ghOutput;
+const setActionOutput = async (projectContext: ProjectContext) => {
+  const { ci, decision, versions, version, ...rest } = projectContext;
   await core.group('Project context', async () => core.info(JSON.stringify(rest, Object.keys(rest).sort(), 2)));
-  if (ver) {
-    await core.group('Version context', async () => core.info(JSON.stringify({ ...ver, version }, undefined, 2)));
+  if (versions) {
+    await core.group('Version context', async () => core.info(JSON.stringify({ ...versions, version }, undefined, 2)));
   }
   if (ci) {
     await core.group('CI context', async () => core.info(JSON.stringify(ci, Object.keys(ci).sort(), 2)));
   }
   await core.group('CI decision', async () => core.info(JSON.stringify(decision, undefined, 2)));
-  const outputs = flatten(ghOutput);
+  const outputs = flatten(projectContext);
   await core.group('Action Output', async () => core.info(JSON.stringify(outputs, Object.keys(outputs).sort(), 2)));
   Object.keys(outputs).forEach(k => core.setOutput(k, outputs[k]));
-}
+};
 
-function run(context: Context) {
-  core.debug(`The event payload: ${JSON.stringify(context, undefined, 2)}`);
-  const ghInput = new GitContextInput(getInputString('defaultBranch'),
+const run = (ghContext: Context) => {
+  core.debug(`The GitHub context: ${JSON.stringify(ghContext, undefined, 2)}`);
+  const gitParserConfig = createGitParserConfig(
+    getInputString('defaultBranch'),
     getInputString('tagPrefix'),
     getInputString('releaseBranchPrefix'),
     getInputString('mergedReleaseMsgRegex'),
     getInputNumber('shaLength'));
-  const interactorInput = new GitInteractorInput(getInputBool('allowCommit', true),
+  const versionStrategy = createVersionStrategy(getInputString('patterns', false), getInputString('nextVerMode'));
+  const gitOpsConfig = createGitOpsConfig(
+    getInputBool('allowCommit', true),
     getInputBool('allowTag', true),
     getInputString('prefixCiMsg'),
     getInputString('correctVerMsg'),
@@ -62,13 +50,12 @@ function run(context: Context) {
     getInputString('userName'),
     getInputString('userEmail'),
     getInputBool('mustSign'),
-    getInputString('nextVerMsg'),
-    getInputString('nextVerMode'));
-  const patterns = getInputString('patterns', false);
+    getInputString('nextVerMsg'));
   const dryRun = getInputBool('dry');
-  core.group('Processing...', () => process(context, ghInput, interactorInput, patterns, dryRun))
-    .then(ghOutput => addActionOutputs(ghOutput))
+  const ops = new ProjectOps({ gitParserConfig, versionStrategy, gitOpsConfig });
+  core.group('Processing...', () => ops.process(ghContext, dryRun))
+    .then(ghOutput => setActionOutput(ghOutput))
     .catch(error => core.setFailed(error));
-}
+};
 
 run(github.context);
