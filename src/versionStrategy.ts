@@ -63,7 +63,7 @@ export const mergeVersionResult = (prev: VersionResult, next: VersionResult): Ve
   version: next.version ?? prev.version,
 });
 
-const DEFAULT_PATTERNS = `pyproject.toml::(version\\s?=\\s?)(")([^"]+)(")::2
+export const DEFAULT_PATTERNS = `pyproject.toml::(version\\s?=\\s?)(")([^"]+)(")::2
   package?(-lock).json::("version"\\s?:\\s?)(")([^"]+)(")::2
   @(gradle|maven|pom|project).properties::(version\\s?=\\s?)(.+)::1
   @(application|version).yml::(version:\\s)(.+)::1
