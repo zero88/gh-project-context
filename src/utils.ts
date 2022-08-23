@@ -63,3 +63,6 @@ export const convertToNumber = (value: any, strict: boolean = false): number | n
   }
   return null;
 };
+
+export const removeEmptyProperties = (obj: any): any => Object.fromEntries(
+  Object.entries(obj).filter(([, v]) => !isEmpty(v)));

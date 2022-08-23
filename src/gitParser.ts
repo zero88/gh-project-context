@@ -1,6 +1,6 @@
 import { Context } from '@actions/github/lib/context';
 import { RuntimeContext, RuntimeVersions } from './runtimeContext';
-import { isEmpty, isNumeric } from './utils';
+import { isEmpty, isNumeric, removeEmptyProperties } from './utils';
 
 export type GitParserConfig = {
   /**
@@ -41,12 +41,11 @@ const defaultConfig: GitParserConfig = {
 export const createGitParserConfig = (defaultBranch?: string, tagPrefix?: string, releaseBranchPrefix?: string,
   mergedReleaseMsg?: string, shaLength?: number): GitParserConfig => {
   return {
-    defaultBranch: defaultBranch ?? defaultConfig.defaultBranch,
-    tagPrefix: tagPrefix ?? defaultConfig.tagPrefix,
-    releaseBranchPrefix: releaseBranchPrefix ?? defaultConfig.releaseBranchPrefix,
-    mergedReleaseMsgRegex: isEmpty(mergedReleaseMsg) ? defaultConfig.mergedReleaseMsgRegex : new RegExp(
-      mergedReleaseMsg!, 'gim'),
-    shaLength: isNumeric(shaLength) ? +shaLength! : defaultConfig.shaLength,
+    ...defaultConfig, ...removeEmptyProperties({
+      defaultBranch, tagPrefix, releaseBranchPrefix,
+      mergedReleaseMsgRegex: isEmpty(mergedReleaseMsg) ? null : new RegExp(mergedReleaseMsg!, 'gim'),
+      shaLength: isNumeric(shaLength) ? +shaLength! : null,
+    }),
   };
 };
 

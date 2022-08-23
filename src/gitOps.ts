@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
 import { exec, strictExec } from './exec';
-import { isEmpty } from './utils';
+import { isEmpty, removeEmptyProperties } from './utils';
 
 /**
  * Represents for Git CI input
@@ -68,17 +68,19 @@ const defaultConfig: GitOpsConfig = {
 };
 
 export const createGitOpsConfig = (allowCommit: boolean, allowTag: boolean, prefixCiMsg: string, correctVerMsg: string,
-  releaseVerMsg: string, username: string, userEmail: string, isSign: boolean, nextVerMsg: string): GitOpsConfig => {
+  releaseVerMsg: string, userName: string, userEmail: string, mustSign: boolean, nextVerMsg: string): GitOpsConfig => {
   return {
-    allowCommit: allowCommit ?? defaultConfig.allowCommit,
-    allowTag: allowTag ?? defaultConfig.allowTag,
-    mustSign: isSign ?? defaultConfig.mustSign,
-    prefixCiMsg: prefixCiMsg ?? defaultConfig.prefixCiMsg,
-    correctVerMsg: correctVerMsg ?? defaultConfig.correctVerMsg,
-    releaseVerMsg: releaseVerMsg ?? defaultConfig.releaseVerMsg,
-    nextVerMsg: nextVerMsg ?? defaultConfig.nextVerMsg,
-    userName: username ?? defaultConfig.userName,
-    userEmail: userEmail ?? defaultConfig.userEmail,
+    ...defaultConfig, ...removeEmptyProperties({
+      allowCommit,
+      allowTag,
+      mustSign,
+      prefixCiMsg,
+      correctVerMsg,
+      releaseVerMsg,
+      nextVerMsg,
+      userName,
+      userEmail,
+    }),
   };
 };
 
