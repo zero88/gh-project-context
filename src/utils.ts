@@ -64,5 +64,48 @@ export const convertToNumber = (value: any, strict: boolean = false): number | n
   return null;
 };
 
+const convertArrToObj = <T, V>(
+  arr: Array<T>,
+  keyMapper: (o: T, idx?: number) => any = (k) => k,
+  valMapper: (o: T, idx?: number) => T | V = (k) => k,
+): { [k: string]: T | V } =>
+  arr.reduce((obj, o, idx) => {
+    obj[`${keyMapper(o, idx)}`] = valMapper(o, idx);
+    return obj;
+  }, {});
+
+export const arrayToObject = <T>(arr: Array<T>): Record<string, T> => convertArrToObj(arr);
+
+export const arrayToObjectWithKey = <T>(arr: Array<T>, keyMapper: (o: T, idx?: number) => any): { [k: string]: T } =>
+  convertArrToObj(arr, keyMapper, (o) => o);
+
+export const arrayToObjectWithVal = <T>(arr: Array<T>, valMapper: (o: T, idx?: number) => any): { [k: string]: T } =>
+  convertArrToObj(arr, (k) => k, valMapper);
+
 export const removeEmptyProperties = (obj: any): any => Object.fromEntries(
   Object.entries(obj).filter(([, v]) => !isEmpty(v)));
+
+export class RegexUtils {
+  private static extract = (match: string, regex: RegExp): RegExpMatchArray | null => match.match(regex);
+
+  static replaceMatch = (expected: string, actual: string, pattern: RegExp, group: number): any => {
+    const matcher = RegexUtils.extract(actual, pattern);
+    const skipFirst = matcher?.[0] === actual;
+    if (group === 0 && skipFirst) {
+      return expected;
+    }
+    const g = skipFirst ? group + 1 : group;
+    return matcher
+      ? matcher.reduce((p, c, i) => skipFirst && i === 0 ? '' : p.concat(i === g ? expected : c), '')
+      : actual;
+  };
+
+  static searchMatch = (actual: string, pattern: RegExp, group: number): string => {
+    const matcher = RegexUtils.extract(actual, pattern);
+    const skipFirst = matcher?.[0] === actual;
+    if (group === 0 && skipFirst) {
+      return actual;
+    }
+    return <string>matcher?.[skipFirst ? group + 1 : group];
+  };
+}
