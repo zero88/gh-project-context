@@ -1,5 +1,6 @@
 import * as core from '@actions/core';
 import { Context } from '@actions/github/lib/context';
+import { ChangelogConfig, ChangelogOps, ChangelogResult } from './changelog';
 import { GitOps, GitOpsConfig } from './gitOps';
 import { GitParser, GitParserConfig } from './gitParser';
 import { CIContext, Decision, ProjectContext, Versions } from './projectContext';
@@ -13,6 +14,7 @@ export type ProjectConfig = {
   readonly gitParserConfig: GitParserConfig;
   readonly gitOpsConfig: GitOpsConfig;
   readonly versionStrategy: VersionStrategy;
+  readonly changelogConfig: ChangelogConfig;
 
 }
 
@@ -21,11 +23,13 @@ export class ProjectOps {
   readonly projectConfig: ProjectConfig;
   private readonly gitParser: GitParser;
   private readonly gitOps: GitOps;
+  private readonly changelogOps: ChangelogOps;
 
   constructor(projectConfig: ProjectConfig) {
     this.projectConfig = projectConfig;
     this.gitParser = new GitParser(this.projectConfig.gitParserConfig);
     this.gitOps = new GitOps(this.projectConfig.gitOpsConfig);
+    this.changelogOps = new ChangelogOps(projectConfig.changelogConfig);
   }
 
   private static makeDecision = (context: RuntimeContext, ci: CIContext): Decision => {
@@ -64,7 +68,8 @@ export class ProjectOps {
 
   private async fixVersion(expectedVersion: string, dryRun: boolean): Promise<VersionResult> {
     core.info(`Fixing version to ${expectedVersion}...`);
-    const r = await VersionPatternParser.replace(this.projectConfig.versionStrategy.versionPatterns, expectedVersion, dryRun);
+    const r = await VersionPatternParser.replace(this.projectConfig.versionStrategy.versionPatterns, expectedVersion,
+      dryRun);
     core.info(`Fixed ${r.files?.length} file(s): [${r.files}]`);
     return r;
   }
@@ -77,12 +82,10 @@ export class ProjectOps {
   }
 
   private async buildContextOnAnotherBranch(ctx: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
-    let ci: CIContext = { isPushed: false };
     const vr = await this.searchVersion(ctx.branch);
-    const versions: Versions = createVersions(ctx.versions, vr.version, ctx.isAfterMergedReleasePR);
-    if (ctx.isAfterMergedReleasePR) {
-      ci = await this.upgradeVersion(versions, dryRun);
-    }
+    const needRun = ctx.isAfterMergedReleasePR;
+    const versions: Versions = createVersions(ctx.versions, vr.version, needRun);
+    const ci: CIContext = needRun ? await this.upgradeVersion(versions, dryRun) : { isPushed: false };
     return ({ ...ctx, version: versions.current, versions, ci, decision: ProjectOps.makeDecision(ctx, ci) });
   }
 
@@ -90,17 +93,24 @@ export class ProjectOps {
     let ci: CIContext = { isPushed: false };
     const vr = await this.fixVersion(ctx.versions.branch, dryRun);
     const versions: Versions = createVersions(ctx.versions, vr.version);
+    const version = versions.current;
     if (vr.isChanged) {
       if (ctx.isTag) {
         throw `Git tag version doesn't meet with current version in files. Invalid files: [${vr.files}]`;
       }
-      ci = await this.gitOps.correctVersion(ctx.branch, versions.current, dryRun);
+      const commitVersionStatus = await this.gitOps.commitVersionCorrection(ctx.branch, version);
+      const changelog = await this.generateChangelog(version, dryRun);
+
+      if (commitVersionStatus.isCommitted || changelog.isCommitted) {
+        ci = { ...(await this.gitOps.pushCommit({ ...commitVersionStatus }, dryRun)), changelog };
+      }
     }
     if (ctx.isReleasePR && ctx.isMerged) {
-      const tag = `${this.projectConfig.gitParserConfig.tagPrefix}${versions.current}`;
-      ci = await this.gitOps.tagThenPush(tag, versions.current, dryRun);
+      const tag = `${this.projectConfig.gitParserConfig.tagPrefix}${version}`;
+      const status = await this.gitOps.tag(tag).then(s => this.gitOps.pushTag(tag, s, dryRun));
+      ci = { ...status, needTag: true };
     }
-    return ({ ...ctx, version: versions.current, versions, ci, decision: ProjectOps.makeDecision(ctx, ci) });
+    return { ...ctx, version, versions, ci, decision: ProjectOps.makeDecision(ctx, ci) };
   }
 
   private async upgradeVersion(versions: Versions, dryRun: boolean): Promise<CIContext> {
@@ -119,9 +129,23 @@ export class ProjectOps {
     }
     const vr = await this.fixVersion(nextVersion!, dryRun);
     if (vr.isChanged) {
-      return await this.gitOps.upgradeVersion(nextVersion!, dryRun);
+      const status = await this.gitOps.commitVersionUpgrade(nextVersion!).then(s => this.gitOps.pushCommit(s, dryRun));
+      return { ...status, needUpgrade: true };
     }
     return { isPushed: false };
+  }
+
+  private async generateChangelog(version: string, dryRun: boolean): Promise<ChangelogResult> {
+    return core.group(`[CHANGELOG] Generating CHANGELOG ${version}`, async () => {
+      const tagPrefix = this.projectConfig.gitParserConfig.tagPrefix;
+      const latestTag = await GitOps.getLatestTag(tagPrefix);
+      const result = await this.changelogOps.generate(latestTag, tagPrefix + version, dryRun);
+      if (result.generated) {
+        const { isPushed, ...status } = await this.gitOps.commit(result.commitMsg);
+        return { ...result, ...status };
+      }
+      return { ...result, isCommitted: false };
+    });
   }
 }
 

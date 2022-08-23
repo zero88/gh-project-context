@@ -58,15 +58,15 @@ inputs:
     required: false
     default: <ci-auto-commit>
   correctVerMsg:
-    description: 'CI: Correct version message template'
+    description: 'CI: Correct version commit message template'
     required: false
     default: Correct version
   releaseVerMsg:
-    description: 'CI: Release version message template'
+    description: 'CI: Release version commit message template'
     required: false
     default: Release version
   nextVerMsg:
-    description: 'CI: Next version message template'
+    description: 'CI: Next version commit message template'
     required: false
     default: Next version
   nextVerMode:
@@ -77,6 +77,25 @@ inputs:
     description: 'CI: Dry run. If `true`, action will run without do modify files or git commit/tag'
     required: true
     default: 'false'
+  changelog:
+    description: 'Enable generate CHANGELOG'
+    required: false
+    default: 'false'
+  changelogImageTag:
+    description: 'CHANGELOG docker image tag: https://github.com/github-changelog-generator/docker-github-changelog-generator'
+    required: false
+    default: '1.16.2'
+  changelogConfigFile:
+    description: 'CHANGELOG config file: https://github.com/github-changelog-generator/github-changelog-generator#params-file'
+    required: false
+    default: '.github_changelog_generator'
+  changelogToken:
+    description: 'CHANGELOG token to query GitHub API: https://github.com/github-changelog-generator/github-changelog-generator#github-token'
+    required: false
+  changelogMsg:
+    description: 'CI: Changelog generator commit message template'
+    required: false
+    default: Generated CHANGELOG
 outputs:
   branch:
     description: 'Current branch name or tag name'
