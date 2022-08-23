@@ -102,15 +102,15 @@ export class GitOps {
     this.config = config;
   }
 
-  static getCommitMsg = async (sha: string) => GitOps.execSilent(['log', '--format=%B', '-n', '1', sha]);
+  static getCommitMsg = async (sha: string) => GitOps.exec(['log', '--format=%B', '-n', '1', sha]);
 
-  static removeRemoteBranch = async (branch: string) => GitOps.execSilent(['push', 'origin', `:${branch}`]);
+  static removeRemoteBranch = async (branch: string) => GitOps.exec(['push', 'origin', `:${branch}`]);
 
   // git tag -l --sort=-creatordate 'v*' | head -n 1
   // git describe --tags --abbrev=0 --match 'v*'
   static getLatestTag = async (pattern?: string) =>
-    GitOps.execSilent(['fetch', '--tag'])
-      .then(() => GitOps.execSilent(['tag', '-l', '--sort=-creatordate', `${pattern}*`]))
+    GitOps.exec(['fetch', '--tag'])
+      .then(() => GitOps.exec(['tag', '-l', '--sort=-creatordate', `${pattern}*`]))
       .then(out => out.split('\n')[0]);
 
   async commit(msg: string, branch?: string): Promise<CommitStatus> {
@@ -175,8 +175,8 @@ export class GitOps {
   }
 
   private async configGitUser(): Promise<string[]> {
-    const userName = await GitOps.execSilent(['config', 'user.name'], this.config.userName);
-    const userEmail = await GitOps.execSilent(['config', 'user.email'], this.config.userEmail);
+    const userName = await GitOps.exec(['config', 'user.name'], this.config.userName);
+    const userEmail = await GitOps.exec(['config', 'user.email'], this.config.userEmail);
     return Promise.resolve(['-c', `user.name=${userName}`, '-c', `user.email=${userEmail}`]);
   };
 
@@ -188,7 +188,7 @@ export class GitOps {
     await strictExec('git', ['checkout', branch!], 'Cannot checkout');
   };
 
-  private static async execSilent(args: string[], fallback: string = ''): Promise<string> {
+  private static async exec(args: string[], fallback: string = ''): Promise<string> {
     const r = await exec('git', args);
     if (!r.success) {
       core.warning(`Cannot exec GIT ${args[0]}: ${r.stderr}`);

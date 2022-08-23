@@ -136,14 +136,16 @@ export class ProjectOps {
   }
 
   private async generateChangelog(version: string, dryRun: boolean): Promise<ChangelogResult> {
-    const tagPrefix = this.projectConfig.gitParserConfig.tagPrefix;
-    const latestTag = await GitOps.getLatestTag(tagPrefix);
-    const result = await this.changelogOps.generate(latestTag, tagPrefix + version, dryRun);
-    if (result.generated) {
-      const { isPushed, ...status } = await this.gitOps.commit(result.commitMsg);
-      return { ...result, ...status };
-    }
-    return { ...result, isCommitted: false };
+    return core.group(`[CHANGELOG] Generating CHANGELOG ${version}`, async () => {
+      const tagPrefix = this.projectConfig.gitParserConfig.tagPrefix;
+      const latestTag = await GitOps.getLatestTag(tagPrefix);
+      const result = await this.changelogOps.generate(latestTag, tagPrefix + version, dryRun);
+      if (result.generated) {
+        const { isPushed, ...status } = await this.gitOps.commit(result.commitMsg);
+        return { ...result, ...status };
+      }
+      return { ...result, isCommitted: false };
+    });
   }
 }
 
