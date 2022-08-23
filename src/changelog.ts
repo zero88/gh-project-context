@@ -69,20 +69,22 @@ export class ChangelogOps {
 
   async generate(latestTag: string, releaseTag: string, dryRun: boolean): Promise<GenerateResult> {
     const commitMsg = `${this.config.commitMsg} ${releaseTag}`;
+    const workspace = readEnv('GITHUB_WORKSPACE');
     const isExisted = await this.verifyExists(releaseTag);
     if (isExisted) {
       return { latestTag, releaseTag, commitMsg, generated: false };
     }
-    const workspace = readEnv('GITHUB_WORKSPACE');
     const owner = readEnv('GITHUB_REPOSITORY_OWNER');
     const repo = readEnv('GITHUB_REPOSITORY');
-    const ghApi = readEnv('GITHUB_API_URL');
-    const ghSite = readEnv('GITHUB_SERVER_URL');
     const project = repo.replace(owner + '/', '');
     const cmd = [
-      `--user`, owner, `--project`, project, `--config-file`, this.config.configFile,
-      `--since-tag`, latestTag, `--future-release`, releaseTag,
-      `--github-api`, ghApi, `--github-site`, ghSite,
+      `--user`, owner,
+      `--project`, project,
+      `--config-file`, this.config.configFile,
+      `--since-tag`, latestTag,
+      `--future-release`, releaseTag,
+      `--github-api`, readEnv('GITHUB_API_URL'),
+      `--github-site`, readEnv('GITHUB_SERVER_URL'),
     ];
     const envs = { 'CHANGELOG_GITHUB_TOKEN': this.config.token };
     const volumes = { [workspace]: DockerRunCLI.DEFAULT_WORKDIR };

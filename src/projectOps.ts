@@ -75,10 +75,10 @@ export class ProjectOps {
   }
 
   private async buildContext(ctx: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
-    if (ctx.isReleasePR || ctx.isTag) {
-      return await this.buildContextWhenRelease(ctx, dryRun);
-    }
-    return await this.buildContextOnAnotherBranch(ctx, dryRun);
+    return core.group(`[CI::Process] Evaluate context on ${ctx.branch}`,
+      () => ctx.isReleasePR || ctx.isTag
+        ? this.buildContextWhenRelease(ctx, dryRun)
+        : this.buildContextOnAnotherBranch(ctx, dryRun));
   }
 
   private async buildContextOnAnotherBranch(ctx: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
@@ -136,7 +136,7 @@ export class ProjectOps {
   }
 
   private async generateChangelog(version: string, dryRun: boolean): Promise<ChangelogResult> {
-    return core.group(`[CHANGELOG] Generating CHANGELOG ${version}`, async () => {
+    return core.group(`[CHANGELOG] Generating CHANGELOG ${version}...`, async () => {
       const tagPrefix = this.projectConfig.gitParserConfig.tagPrefix;
       const latestTag = await GitOps.getLatestTag(tagPrefix);
       const result = await this.changelogOps.generate(latestTag, tagPrefix + version, dryRun);

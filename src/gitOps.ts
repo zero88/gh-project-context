@@ -106,24 +106,21 @@ export class GitOps {
 
   static removeRemoteBranch = async (branch: string) => GitOps.exec(['push', 'origin', `:${branch}`]);
 
-  // git tag -l --sort=-creatordate 'v*' | head -n 1
-  // git describe --tags --abbrev=0 --match 'v*'
   static getLatestTag = async (pattern?: string) =>
     GitOps.exec(['fetch', '--tag'])
       .then(() => GitOps.exec(['tag', '-l', '--sort=-creatordate', `${pattern}*`]))
       .then(out => out.split('\n')[0]);
 
   async commit(msg: string, branch?: string): Promise<CommitStatus> {
-    return this.doCommit(msg, msg, branch);
+    return this.doCommit(msg, branch);
   }
 
   async commitVersionCorrection(branch: string, version: string): Promise<CommitStatus> {
-    return this.doCommit(`${this.config.correctVerMsg} ${version}`,
-      `Correct version in branch ${branch} => ${version}...`, branch);
+    return this.doCommit(`${this.config.correctVerMsg} ${version}`, branch);
   }
 
   async commitVersionUpgrade(nextVersion: string): Promise<CommitStatus> {
-    return this.doCommit(`${this.config.nextVerMsg} ${nextVersion}`, `Upgrade to new version to ${nextVersion}`);
+    return this.doCommit(`${this.config.nextVerMsg} ${nextVersion}`);
   };
 
   async tag(tag: string): Promise<CommitStatus> {
@@ -157,13 +154,13 @@ export class GitOps {
       .then(s => ({ ...status, isPushed: s.success }));
   };
 
-  private doCommit(msg: string, groupMsg: string, branch?: string): Promise<CommitStatus> {
+  private doCommit(msg: string, branch?: string): Promise<CommitStatus> {
     if (!this.config.allowCommit) {
       return Promise.resolve({ isCommitted: false, isPushed: false });
     }
     const commitMsg = `${this.config.prefixCiMsg} ${msg}`;
     const commitArgs = ['commit', ...this.config.mustSign ? ['-S'] : [], '-a', '-m', commitMsg];
-    return core.group(`[GIT Commit] ${groupMsg}...`,
+    return core.group(`[GIT Commit] ${commitMsg}`,
       () => GitOps.checkoutBranch(branch)
         .then(() => this.configGitUser())
         .then(gc => strictExec('git', [...gc, ...commitArgs], `Cannot commit`))

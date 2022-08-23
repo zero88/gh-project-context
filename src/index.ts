@@ -60,7 +60,7 @@ const run = (ghContext: Context) => {
     getInputString('changelogToken', false),
     getInputString('changelogMsg', false));
   const ops = new ProjectOps({ gitParserConfig, versionStrategy, gitOpsConfig, changelogConfig });
-  core.group('Processing...', () => ops.process(ghContext, dryRun))
+  core.group('Loading...', () => ops.process(ghContext, dryRun))
     .then(ghOutput => setActionOutput(ghOutput))
     .catch(error => core.setFailed(error));
 };
