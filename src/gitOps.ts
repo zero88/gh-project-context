@@ -102,16 +102,16 @@ export class GitOps {
     this.config = config;
   }
 
-  static getCommitMsg = async (sha: string) => GitOps.exec(['log', '--format=%B', '-n', '1', sha]);
+  static getCommitMsg = async (sha: string) => GitOps.lenientExec(['log', '--format=%B', '-n', '1', sha]);
 
-  static removeRemoteBranch = async (branch: string) => GitOps.exec(['push', 'origin', `:${branch}`]);
+  static removeRemoteBranch = async (branch: string) => GitOps.lenientExec(['push', 'origin', `:${branch}`]);
 
   static getLatestTag = async (pattern?: string) =>
-    GitOps.exec(['fetch', '--tag'])
-      .then(() => GitOps.exec(['tag', '-l', '--sort=-creatordate', `${pattern}*`]))
+    GitOps.lenientExec(['fetch', '--tag'])
+      .then(() => GitOps.lenientExec(['tag', '-l', '--sort=-creatordate', `${pattern}*`]))
       .then(out => out.split('\n')[0]);
 
-  async commit(msg: string, branch?: string): Promise<CommitStatus> {
+  async commit(branch: string, msg: string): Promise<CommitStatus> {
     return this.doCommit(msg, branch);
   }
 
@@ -119,8 +119,8 @@ export class GitOps {
     return this.doCommit(`${this.config.correctVerMsg} ${version}`, branch);
   }
 
-  async commitVersionUpgrade(nextVersion: string): Promise<CommitStatus> {
-    return this.doCommit(`${this.config.nextVerMsg} ${nextVersion}`);
+  async commitVersionUpgrade(branch: string, nextVersion: string): Promise<CommitStatus> {
+    return this.doCommit(`${this.config.nextVerMsg} ${nextVersion}`, branch);
   };
 
   async tag(tag: string): Promise<CommitStatus> {
@@ -164,16 +164,15 @@ export class GitOps {
       () => GitOps.checkoutBranch(branch)
         .then(() => this.configGitUser())
         .then(gc => strictExec('git', [...gc, ...commitArgs], `Cannot commit`))
-        .then(
-          () => strictExec('git', ['show', '--shortstat', '--show-signature'], `Cannot show recently commit`, false))
+        .then(() => strictExec('git', ['show', '--shortstat', '--show-signature'], `Cannot show recently commit`, false))
         .then(() => strictExec('git', ['rev-parse', 'HEAD'], 'Cannot get recently commit'))
         .then(r => r.stdout)
         .then(commitId => ({ isCommitted: true, isPushed: false, commitMsg, commitId })));
   }
 
   private async configGitUser(): Promise<string[]> {
-    const userName = await GitOps.exec(['config', 'user.name'], this.config.userName);
-    const userEmail = await GitOps.exec(['config', 'user.email'], this.config.userEmail);
+    const userName = await GitOps.lenientExec(['config', 'user.name'], this.config.userName);
+    const userEmail = await GitOps.lenientExec(['config', 'user.email'], this.config.userEmail);
     return Promise.resolve(['-c', `user.name=${userName}`, '-c', `user.email=${userEmail}`]);
   };
 
@@ -185,7 +184,7 @@ export class GitOps {
     await strictExec('git', ['checkout', branch!], 'Cannot checkout');
   };
 
-  private static async exec(args: string[], fallback: string = ''): Promise<string> {
+  private static async lenientExec(args: string[], fallback: string = ''): Promise<string> {
     const r = await exec('git', args);
     if (!r.success) {
       core.warning(`Cannot exec GIT ${args[0]}: ${r.stderr}`);

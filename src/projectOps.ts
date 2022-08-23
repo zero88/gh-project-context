@@ -85,7 +85,7 @@ export class ProjectOps {
     const vr = await this.searchVersion(ctx.branch);
     const needRun = ctx.isAfterMergedReleasePR;
     const versions: Versions = createVersions(ctx.versions, vr.version, needRun);
-    const ci: CIContext = needRun ? await this.upgradeVersion(versions, dryRun) : { isPushed: false };
+    const ci: CIContext = needRun ? await this.upgradeVersion(ctx.branch, versions, dryRun) : { isPushed: false };
     return ({ ...ctx, version: versions.current, versions, ci, decision: ProjectOps.makeDecision(ctx, ci) });
   }
 
@@ -98,11 +98,11 @@ export class ProjectOps {
       if (ctx.isTag) {
         throw `Git tag version doesn't meet with current version in files. Invalid files: [${vr.files}]`;
       }
-      const commitVersionStatus = await this.gitOps.commitVersionCorrection(ctx.branch, version);
-      const changelog = await this.generateChangelog(version, dryRun);
+      const versionCommit = await this.gitOps.commitVersionCorrection(ctx.branch, version);
+      const changelog = await this.generateChangelog(ctx.branch, version, dryRun);
 
-      if (commitVersionStatus.isCommitted || changelog.isCommitted) {
-        ci = { ...(await this.gitOps.pushCommit({ ...commitVersionStatus }, dryRun)), changelog };
+      if (versionCommit.isCommitted || changelog.isCommitted) {
+        ci = { ...(await this.gitOps.pushCommit(versionCommit, dryRun)), changelog };
       }
     }
     if (ctx.isReleasePR && ctx.isMerged) {
@@ -113,7 +113,7 @@ export class ProjectOps {
     return { ...ctx, version, versions, ci, decision: ProjectOps.makeDecision(ctx, ci) };
   }
 
-  private async upgradeVersion(versions: Versions, dryRun: boolean): Promise<CIContext> {
+  private async upgradeVersion(branch: string, versions: Versions, dryRun: boolean): Promise<CIContext> {
     const nextMode = this.projectConfig.versionStrategy.nextVersionMode;
     const nextVersion = getNextVersion(versions, nextMode);
     if (this.projectConfig.versionStrategy.nextVersionMode === 'NONE') {
@@ -129,19 +129,21 @@ export class ProjectOps {
     }
     const vr = await this.fixVersion(nextVersion!, dryRun);
     if (vr.isChanged) {
-      const status = await this.gitOps.commitVersionUpgrade(nextVersion!).then(s => this.gitOps.pushCommit(s, dryRun));
+      const status = await this.gitOps
+        .commitVersionUpgrade(branch, nextVersion!)
+        .then(s => this.gitOps.pushCommit(s, dryRun));
       return { ...status, needUpgrade: true };
     }
     return { isPushed: false };
   }
 
-  private async generateChangelog(version: string, dryRun: boolean): Promise<ChangelogResult> {
+  private async generateChangelog(branch: string, version: string, dryRun: boolean): Promise<ChangelogResult> {
     return core.group(`[CHANGELOG] Generating CHANGELOG ${version}...`, async () => {
       const tagPrefix = this.projectConfig.gitParserConfig.tagPrefix;
       const latestTag = await GitOps.getLatestTag(tagPrefix);
       const result = await this.changelogOps.generate(latestTag, tagPrefix + version, dryRun);
       if (result.generated) {
-        const { isPushed, ...status } = await this.gitOps.commit(result.commitMsg);
+        const { isPushed, ...status } = await this.gitOps.commit(branch, result.commitMsg);
         return { ...result, ...status };
       }
       return { ...result, isCommitted: false };
