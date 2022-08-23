@@ -1,5 +1,6 @@
 import * as core from '@actions/core';
 import { Context } from '@actions/github/lib/context';
+import { ChangelogConfig, ChangelogOps, ChangelogResult } from './changelog';
 import { GitOps, GitOpsConfig } from './gitOps';
 import { GitParser, GitParserConfig } from './gitParser';
 import { CIContext, Decision, ProjectContext, Versions } from './projectContext';
@@ -13,6 +14,7 @@ export type ProjectConfig = {
   readonly gitParserConfig: GitParserConfig;
   readonly gitOpsConfig: GitOpsConfig;
   readonly versionStrategy: VersionStrategy;
+  readonly changelogConfig: ChangelogConfig;
 
 }
 
@@ -21,11 +23,13 @@ export class ProjectOps {
   readonly projectConfig: ProjectConfig;
   private readonly gitParser: GitParser;
   private readonly gitOps: GitOps;
+  private readonly changelogOps: ChangelogOps;
 
   constructor(projectConfig: ProjectConfig) {
     this.projectConfig = projectConfig;
     this.gitParser = new GitParser(this.projectConfig.gitParserConfig);
     this.gitOps = new GitOps(this.projectConfig.gitOpsConfig);
+    this.changelogOps = new ChangelogOps(projectConfig.changelogConfig);
   }
 
   private static makeDecision = (context: RuntimeContext, ci: CIContext): Decision => {
@@ -64,7 +68,8 @@ export class ProjectOps {
 
   private async fixVersion(expectedVersion: string, dryRun: boolean): Promise<VersionResult> {
     core.info(`Fixing version to ${expectedVersion}...`);
-    const r = await VersionPatternParser.replace(this.projectConfig.versionStrategy.versionPatterns, expectedVersion, dryRun);
+    const r = await VersionPatternParser.replace(this.projectConfig.versionStrategy.versionPatterns, expectedVersion,
+      dryRun);
     core.info(`Fixed ${r.files?.length} file(s): [${r.files}]`);
     return r;
   }
@@ -93,8 +98,12 @@ export class ProjectOps {
       if (ctx.isTag) {
         throw `Git tag version doesn't meet with current version in files. Invalid files: [${vr.files}]`;
       }
-      ci = await this.gitOps.commitVersionCorrection(ctx.branch, version)
-        .then(s => this.gitOps.pushCommit(s, dryRun));
+      const commitVersionStatus = await this.gitOps.commitVersionCorrection(ctx.branch, version);
+      const changelog = await this.generateChangelog(version, dryRun);
+
+      if (commitVersionStatus.isCommitted || changelog.isCommitted) {
+        ci = { ...(await this.gitOps.pushCommit({ ...commitVersionStatus }, dryRun)), changelog };
+      }
     }
     if (ctx.isReleasePR && ctx.isMerged) {
       const tag = `${this.projectConfig.gitParserConfig.tagPrefix}${version}`;
@@ -124,6 +133,17 @@ export class ProjectOps {
       return { ...status, needUpgrade: true };
     }
     return { isPushed: false };
+  }
+
+  private async generateChangelog(version: string, dryRun: boolean): Promise<ChangelogResult> {
+    const tagPrefix = this.projectConfig.gitParserConfig.tagPrefix;
+    const latestTag = await GitOps.getLatestTag(tagPrefix);
+    const result = await this.changelogOps.generate(latestTag, tagPrefix + version, dryRun);
+    if (result.generated) {
+      const { isPushed, ...status } = await this.gitOps.commit(result.commitMsg);
+      return { ...result, ...status };
+    }
+    return { ...result, isCommitted: false };
   }
 }
 

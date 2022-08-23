@@ -1,3 +1,5 @@
+import { ChangelogResult } from './changelog';
+
 export interface Decision {
   /**
    * Should run the next step: such as build & test
@@ -38,6 +40,11 @@ export interface CIContext {
    * CI auto commit message
    */
   readonly commitMsg?: string;
+
+  /**
+   * CI changelog result
+   */
+  readonly changelog?: ChangelogResult;
 }
 
 export interface Versions {

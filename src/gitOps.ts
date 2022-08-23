@@ -106,6 +106,13 @@ export class GitOps {
 
   static removeRemoteBranch = async (branch: string) => GitOps.execSilent(['push', 'origin', `:${branch}`]);
 
+  // git tag -l --sort=-creatordate 'v*' | head -n 1
+  // git describe --tags --abbrev=0 --match 'v*'
+  static getLatestTag = async (pattern?: string) =>
+    GitOps.execSilent(['fetch', '--tag'])
+      .then(() => GitOps.execSilent(['tag', '-l', '--sort=-creatordate', `${pattern}*`]))
+      .then(out => out.split('\n')[0]);
+
   async commit(msg: string, branch?: string): Promise<CommitStatus> {
     return this.doCommit(msg, msg, branch);
   }

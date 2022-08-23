@@ -1,6 +1,7 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { Context } from '@actions/github/lib/context';
+import { createChangelogConfig } from './changelog';
 import { createGitOpsConfig } from './gitOps';
 import { createGitParserConfig } from './gitParser';
 import { ProjectContext } from './projectContext';
@@ -52,7 +53,13 @@ const run = (ghContext: Context) => {
     getInputBool('mustSign'),
     getInputString('nextVerMsg'));
   const dryRun = getInputBool('dry');
-  const ops = new ProjectOps({ gitParserConfig, versionStrategy, gitOpsConfig });
+  const changelogConfig = createChangelogConfig(
+    getInputBool('changelog', false),
+    getInputString('changelogImageTag', false),
+    getInputString('changelogConfigFile', false),
+    getInputString('changelogToken', false),
+    getInputString('changelogMsg', false));
+  const ops = new ProjectOps({ gitParserConfig, versionStrategy, gitOpsConfig, changelogConfig });
   core.group('Processing...', () => ops.process(ghContext, dryRun))
     .then(ghOutput => setActionOutput(ghOutput))
     .catch(error => core.setFailed(error));

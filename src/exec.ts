@@ -36,3 +36,5 @@ export const strictExec = async (command: string, args: string[], msgIfError: st
     return r;
   });
 };
+
+export const readEnv = (envVar: string): string => process.env[envVar] ?? '';
