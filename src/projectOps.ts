@@ -77,12 +77,10 @@ export class ProjectOps {
   }
 
   private async buildContextOnAnotherBranch(ctx: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
-    let ci: CIContext = { isPushed: false };
     const vr = await this.searchVersion(ctx.branch);
-    const versions: Versions = createVersions(ctx.versions, vr.version, ctx.isAfterMergedReleasePR);
-    if (ctx.isAfterMergedReleasePR) {
-      ci = await this.upgradeVersion(versions, dryRun);
-    }
+    const needRun = ctx.isAfterMergedReleasePR;
+    const versions: Versions = createVersions(ctx.versions, vr.version, needRun);
+    const ci: CIContext = needRun ? await this.upgradeVersion(versions, dryRun) : { isPushed: false };
     return ({ ...ctx, version: versions.current, versions, ci, decision: ProjectOps.makeDecision(ctx, ci) });
   }
 
@@ -90,17 +88,20 @@ export class ProjectOps {
     let ci: CIContext = { isPushed: false };
     const vr = await this.fixVersion(ctx.versions.branch, dryRun);
     const versions: Versions = createVersions(ctx.versions, vr.version);
+    const version = versions.current;
     if (vr.isChanged) {
       if (ctx.isTag) {
         throw `Git tag version doesn't meet with current version in files. Invalid files: [${vr.files}]`;
       }
-      ci = await this.gitOps.correctVersion(ctx.branch, versions.current, dryRun);
+      ci = await this.gitOps.commitVersionCorrection(ctx.branch, version)
+        .then(s => this.gitOps.pushCommit(s, dryRun));
     }
     if (ctx.isReleasePR && ctx.isMerged) {
-      const tag = `${this.projectConfig.gitParserConfig.tagPrefix}${versions.current}`;
-      ci = await this.gitOps.tagThenPush(tag, versions.current, dryRun);
+      const tag = `${this.projectConfig.gitParserConfig.tagPrefix}${version}`;
+      const status = await this.gitOps.tag(tag).then(s => this.gitOps.pushTag(tag, s, dryRun));
+      ci = { ...status, needTag: true };
     }
-    return ({ ...ctx, version: versions.current, versions, ci, decision: ProjectOps.makeDecision(ctx, ci) });
+    return { ...ctx, version, versions, ci, decision: ProjectOps.makeDecision(ctx, ci) };
   }
 
   private async upgradeVersion(versions: Versions, dryRun: boolean): Promise<CIContext> {
@@ -119,7 +120,8 @@ export class ProjectOps {
     }
     const vr = await this.fixVersion(nextVersion!, dryRun);
     if (vr.isChanged) {
-      return await this.gitOps.upgradeVersion(nextVersion!, dryRun);
+      const status = await this.gitOps.commitVersionUpgrade(nextVersion!).then(s => this.gitOps.pushCommit(s, dryRun));
+      return { ...status, needUpgrade: true };
     }
     return { isPushed: false };
   }

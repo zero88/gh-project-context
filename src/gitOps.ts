@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
 import { exec, strictExec } from './exec';
-import { CIContext } from './projectContext';
+import { isEmpty } from './utils';
 
 /**
  * Represents for Git CI input
@@ -82,6 +82,13 @@ export const createGitOpsConfig = (allowCommit: boolean, allowTag: boolean, pref
   };
 };
 
+export interface CommitStatus {
+  isCommitted: boolean;
+  isPushed: boolean;
+  commitId?: string;
+  commitMsg?: string;
+}
+
 /**
  * Represents for Git CI interactor like: commit, push, tag
  */
@@ -97,43 +104,22 @@ export class GitOps {
 
   static removeRemoteBranch = async (branch: string) => GitOps.execSilent(['push', 'origin', `:${branch}`]);
 
-  static checkoutBranch = async (branch: string) => {
-    await strictExec('git', ['fetch', '--depth=1'], 'Cannot fetch');
-    await strictExec('git', ['checkout', branch], 'Cannot checkout');
+  async commit(msg: string, branch?: string): Promise<CommitStatus> {
+    return this.doCommit(msg, msg, branch);
+  }
+
+  async commitVersionCorrection(branch: string, version: string): Promise<CommitStatus> {
+    return this.doCommit(`${this.config.correctVerMsg} ${version}`,
+      `Correct version in branch ${branch} => ${version}...`, branch);
+  }
+
+  async commitVersionUpgrade(nextVersion: string): Promise<CommitStatus> {
+    return this.doCommit(`${this.config.nextVerMsg} ${nextVersion}`, `Upgrade to new version to ${nextVersion}`);
   };
 
-  private static execSilent = async (args: string[], fallback: string = ''): Promise<string> => {
-    const r = await exec('git', args);
-    if (!r.success) {
-      core.warning(`Cannot exec GIT ${args[0]}: ${r.stderr}`);
-    }
-    return r.success ? r.stdout : fallback;
-  };
-
-  correctVersion = async (branch: string, version: string, dryRun: boolean): Promise<CIContext> => {
-    if (!this.config.allowCommit || dryRun) {
-      return { mustFixVersion: true, isPushed: false };
-    }
-    const commitMsg = `${this.config.prefixCiMsg} ${this.config.correctVerMsg} ${version}`;
-    return core.group(`[GIT Commit] Correct version in branch ${branch} => ${version}...`,
-      () => GitOps.checkoutBranch(branch)
-        .then(() => this.commitThenPush(commitMsg))
-        .then(commitId => ({ mustFixVersion: true, isPushed: true, commitMsg, commitId })));
-  };
-
-  upgradeVersion = async (nextVersion: string, dryRun: boolean): Promise<CIContext> => {
-    if (!this.config.allowCommit || dryRun) {
-      return { needUpgrade: true, isPushed: false };
-    }
-    const commitMsg = `${this.config.prefixCiMsg} ${this.config.nextVerMsg} ${nextVersion}`;
-    return core.group(`[GIT Commit] Upgrade to new version to ${nextVersion}...`,
-      () => this.commitThenPush(commitMsg)
-        .then(commitId => ({ needUpgrade: true, isPushed: true, commitMsg, commitId })));
-  };
-
-  tagThenPush = async (tag: string, version: string, dryRun: boolean): Promise<CIContext> => {
-    if (!this.config.allowTag || dryRun) {
-      return { needTag: true, isPushed: false };
+  async tag(tag: string): Promise<CommitStatus> {
+    if (!this.config.allowTag) {
+      return { isCommitted: false, isPushed: false };
     }
     const commitMsg = `${this.config.releaseVerMsg} ${tag}`;
     const signArgs = this.config.mustSign ? ['-s'] : [];
@@ -141,28 +127,63 @@ export class GitOps {
       strictExec('git', ['fetch', '--depth=1'], 'Cannot fetch')
         .then(ignore => strictExec('git', ['rev-parse', '--short', 'HEAD'], 'Cannot show last commit'))
         .then(r => r.stdout)
-        .then(commitId => (<CIContext>{ needTag: true, isPushed: true, commitMsg, commitId }))
-        .then(ctx => this.configGitUser()
-          .then(g => [...g, 'tag', ...signArgs, '-a', '-m', ctx.commitMsg!, tag, ctx.commitId!])
-          .then(tagArgs => strictExec('git', tagArgs, `Cannot tag`))
+        .then(commitId => this.configGitUser()
+          .then(g => strictExec('git', [...g, 'tag', ...signArgs, '-a', '-m', commitMsg, tag, commitId], `Cannot tag`))
           .then(() => strictExec('git', ['show', '--shortstat', '--show-signature', tag], `Cannot show tag`, false))
-          .then(() => strictExec('git', ['push', '-uf', 'origin', tag], `Cannot push`, false))
-          .then(() => ctx)));
+          .then(() => ({ isCommitted: true, isPushed: false, commitMsg, commitId }))));
   };
 
-  private commitThenPush = async (commitMsg: string): Promise<string> => {
+  async pushCommit(status: CommitStatus, dryRun: boolean): Promise<CommitStatus> {
+    if (dryRun || !status.isCommitted) {
+      return { ...status, isPushed: false };
+    }
+    return strictExec('git', ['push'], `Cannot push commits`, false).then(s => ({ ...status, isPushed: s.success }));
+  };
+
+  async pushTag(tag: string, status: CommitStatus, dryRun: boolean): Promise<CommitStatus> {
+    if (dryRun || !status.isCommitted) {
+      return { ...status, isPushed: false };
+    }
+    return strictExec('git', ['push', '-uf', 'origin', tag], `Cannot push tag`, false)
+      .then(s => ({ ...status, isPushed: s.success }));
+  };
+
+  private doCommit(msg: string, groupMsg: string, branch?: string): Promise<CommitStatus> {
+    if (!this.config.allowCommit) {
+      return Promise.resolve({ isCommitted: false, isPushed: false });
+    }
+    const commitMsg = `${this.config.prefixCiMsg} ${msg}`;
     const commitArgs = ['commit', ...this.config.mustSign ? ['-S'] : [], '-a', '-m', commitMsg];
-    return this.configGitUser()
-      .then(gc => strictExec('git', [...gc, ...commitArgs], `Cannot commit`))
-      .then(() => strictExec('git', ['show', '--shortstat', '--show-signature'], `Cannot show recently commit`, false))
-      .then(() => strictExec('git', ['push'], `Cannot push`, false))
-      .then(() => strictExec('git', ['rev-parse', 'HEAD'], 'Cannot show last commit'))
-      .then(r => r.stdout);
-  };
+    return core.group(`[GIT Commit] ${groupMsg}...`,
+      () => GitOps.checkoutBranch(branch)
+        .then(() => this.configGitUser())
+        .then(gc => strictExec('git', [...gc, ...commitArgs], `Cannot commit`))
+        .then(
+          () => strictExec('git', ['show', '--shortstat', '--show-signature'], `Cannot show recently commit`, false))
+        .then(() => strictExec('git', ['rev-parse', 'HEAD'], 'Cannot get recently commit'))
+        .then(r => r.stdout)
+        .then(commitId => ({ isCommitted: true, isPushed: false, commitMsg, commitId })));
+  }
 
-  private configGitUser = async (): Promise<string[]> => {
+  private async configGitUser(): Promise<string[]> {
     const userName = await GitOps.execSilent(['config', 'user.name'], this.config.userName);
     const userEmail = await GitOps.execSilent(['config', 'user.email'], this.config.userEmail);
     return Promise.resolve(['-c', `user.name=${userName}`, '-c', `user.email=${userEmail}`]);
+  };
+
+  private static async checkoutBranch(branch?: string) {
+    if (isEmpty(branch)) {
+      return Promise.resolve();
+    }
+    await strictExec('git', ['fetch', '--depth=1'], 'Cannot fetch');
+    await strictExec('git', ['checkout', branch!], 'Cannot checkout');
+  };
+
+  private static async execSilent(args: string[], fallback: string = ''): Promise<string> {
+    const r = await exec('git', args);
+    if (!r.success) {
+      core.warning(`Cannot exec GIT ${args[0]}: ${r.stderr}`);
+    }
+    return r.success ? r.stdout : fallback;
   };
 }
