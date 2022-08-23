@@ -69,20 +69,22 @@ export class ChangelogOps {
 
   async generate(latestTag: string, releaseTag: string, dryRun: boolean): Promise<GenerateResult> {
     const commitMsg = `${this.config.commitMsg} ${releaseTag}`;
-    const isExisted = await this.verifyExists(releaseTag);
+    const workspace = readEnv('GITHUB_WORKSPACE');
+    const isExisted = await this.verifyExists(workspace, releaseTag);
     if (isExisted) {
       return { latestTag, releaseTag, commitMsg, generated: false };
     }
-    const workspace = readEnv('GITHUB_WORKSPACE');
     const owner = readEnv('GITHUB_REPOSITORY_OWNER');
     const repo = readEnv('GITHUB_REPOSITORY');
-    const ghApi = readEnv('GITHUB_API_URL');
-    const ghSite = readEnv('GITHUB_SERVER_URL');
     const project = repo.replace(owner + '/', '');
     const cmd = [
-      `--user`, owner, `--project`, project, `--config-file`, this.config.configFile,
-      `--since-tag`, latestTag, `--future-release`, releaseTag,
-      `--github-api`, ghApi, `--github-site`, ghSite,
+      `--user`, owner,
+      `--project`, project,
+      `--config-file`, this.config.configFile,
+      `--since-tag`, latestTag,
+      `--future-release`, releaseTag,
+      `--github-api`, readEnv('GITHUB_API_URL'),
+      `--github-site`, readEnv('GITHUB_SERVER_URL'),
     ];
     const envs = { 'CHANGELOG_GITHUB_TOKEN': this.config.token };
     const volumes = { [workspace]: DockerRunCLI.DEFAULT_WORKDIR };
@@ -90,7 +92,7 @@ export class ChangelogOps {
     return { latestTag, releaseTag, commitMsg, generated: dockerRun.success };
   }
 
-  async verifyExists(releaseTag: string): Promise<boolean> {
+  async verifyExists(workspace: string, releaseTag: string): Promise<boolean> {
     const re = /((base|output)\s?=\s?)(.+)/;
     const result: string[] = [];
     await replaceInFile({
@@ -100,8 +102,7 @@ export class ChangelogOps {
         return match;
       },
     });
-    const dir = path.dirname(this.config.configFile);
-    const files = (isEmpty(result) ? ['CHANGELOG.md'] : result).map(f => path.resolve(dir, f));
+    const files = (isEmpty(result) ? ['CHANGELOG.md'] : result).map(f => path.resolve(workspace, f));
     return await replaceInFile(
       { files, from: releaseTag, dry: true, countMatches: true, allowEmptyPaths: true, to: match => match })
       .then(rr => rr.some(r => r?.numMatches! > 0));
