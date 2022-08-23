@@ -70,7 +70,7 @@ export class ChangelogOps {
   async generate(latestTag: string, releaseTag: string, dryRun: boolean): Promise<GenerateResult> {
     const commitMsg = `${this.config.commitMsg} ${releaseTag}`;
     const workspace = readEnv('GITHUB_WORKSPACE');
-    const isExisted = await this.verifyExists(releaseTag);
+    const isExisted = await this.verifyExists(workspace, releaseTag);
     if (isExisted) {
       return { latestTag, releaseTag, commitMsg, generated: false };
     }
@@ -92,7 +92,7 @@ export class ChangelogOps {
     return { latestTag, releaseTag, commitMsg, generated: dockerRun.success };
   }
 
-  async verifyExists(releaseTag: string): Promise<boolean> {
+  async verifyExists(workspace: string, releaseTag: string): Promise<boolean> {
     const re = /((base|output)\s?=\s?)(.+)/;
     const result: string[] = [];
     await replaceInFile({
@@ -102,8 +102,7 @@ export class ChangelogOps {
         return match;
       },
     });
-    const dir = path.dirname(this.config.configFile);
-    const files = (isEmpty(result) ? ['CHANGELOG.md'] : result).map(f => path.resolve(dir, f));
+    const files = (isEmpty(result) ? ['CHANGELOG.md'] : result).map(f => path.resolve(workspace, f));
     return await replaceInFile(
       { files, from: releaseTag, dry: true, countMatches: true, allowEmptyPaths: true, to: match => match })
       .then(rr => rr.some(r => r?.numMatches! > 0));
