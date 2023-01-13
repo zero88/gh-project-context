@@ -71,7 +71,7 @@ export class ChangelogOps {
     const commitMsg = `${this.config.commitMsg} ${releaseTag}`;
     const workspace = readEnv('GITHUB_WORKSPACE');
     const isExisted = await this.verifyExists(workspace, releaseTag);
-    if (isExisted) {
+    if (isExisted || !this.config.active) {
       return { latestTag, releaseTag, commitMsg, generated: false };
     }
     const owner = readEnv('GITHUB_REPOSITORY_OWNER');
