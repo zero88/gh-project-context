@@ -86,10 +86,17 @@ export const createGitOpsConfig = (allowCommit: boolean, allowTag: boolean, pref
 
 export interface CommitStatus {
   isCommitted: boolean;
-  isPushed: boolean;
   commitId?: string;
   commitMsg?: string;
 }
+
+export const mergeCommitStatus = (status1: CommitStatus, status2: CommitStatus): CommitStatus => ({
+  isCommitted: status1.isCommitted || status1.isCommitted,
+  commitId: status1.commitId ?? status2.commitId,
+  commitMsg: status1.commitMsg ?? status2.commitMsg,
+});
+
+export type CommitPushStatus = CommitStatus & { isPushed: boolean };
 
 /**
  * Represents for Git CI interactor like: commit, push, tag
@@ -125,7 +132,7 @@ export class GitOps {
 
   async tag(tag: string): Promise<CommitStatus> {
     if (!this.config.allowTag) {
-      return { isCommitted: false, isPushed: false };
+      return { isCommitted: false };
     }
     const commitMsg = `${this.config.releaseVerMsg} ${tag}`;
     const signArgs = this.config.mustSign ? ['-s'] : [];
@@ -136,17 +143,17 @@ export class GitOps {
         .then(commitId => this.configGitUser()
           .then(g => strictExec('git', [...g, 'tag', ...signArgs, '-a', '-m', commitMsg, tag, commitId], `Cannot tag`))
           .then(() => strictExec('git', ['show', '--shortstat', '--show-signature', tag], `Cannot show tag`, false))
-          .then(() => ({ isCommitted: true, isPushed: false, commitMsg, commitId }))));
+          .then(() => ({ isCommitted: true, commitMsg, commitId }))));
   };
 
-  async pushCommit(status: CommitStatus, dryRun: boolean): Promise<CommitStatus> {
+  async pushCommit(status: CommitStatus, dryRun: boolean): Promise<CommitPushStatus> {
     if (dryRun || !status.isCommitted) {
       return { ...status, isPushed: false };
     }
     return strictExec('git', ['push'], `Cannot push commits`, false).then(s => ({ ...status, isPushed: s.success }));
   };
 
-  async pushTag(tag: string, status: CommitStatus, dryRun: boolean): Promise<CommitStatus> {
+  async pushTag(tag: string, status: CommitStatus, dryRun: boolean): Promise<CommitPushStatus> {
     if (dryRun || !status.isCommitted) {
       return { ...status, isPushed: false };
     }
@@ -156,7 +163,7 @@ export class GitOps {
 
   private doCommit(msg: string, branch?: string): Promise<CommitStatus> {
     if (!this.config.allowCommit) {
-      return Promise.resolve({ isCommitted: false, isPushed: false });
+      return Promise.resolve({ isCommitted: false });
     }
     const commitMsg = `${this.config.prefixCiMsg} ${msg}`;
     const commitArgs = ['commit', ...this.config.mustSign ? ['-S'] : [], '-a', '-m', commitMsg];
@@ -164,10 +171,11 @@ export class GitOps {
       () => GitOps.checkoutBranch(branch)
         .then(() => this.configGitUser())
         .then(gc => strictExec('git', [...gc, ...commitArgs], `Cannot commit`))
-        .then(() => strictExec('git', ['show', '--shortstat', '--show-signature'], `Cannot show recently commit`, false))
+        .then(
+          () => strictExec('git', ['show', '--shortstat', '--show-signature'], `Cannot show recently commit`, false))
         .then(() => strictExec('git', ['rev-parse', 'HEAD'], 'Cannot get recently commit'))
         .then(r => r.stdout)
-        .then(commitId => ({ isCommitted: true, isPushed: false, commitMsg, commitId })));
+        .then(commitId => ({ isCommitted: true, commitMsg, commitId })));
   }
 
   private async configGitUser(): Promise<string[]> {

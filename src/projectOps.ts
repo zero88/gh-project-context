@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
 import { Context } from '@actions/github/lib/context';
 import { ChangelogConfig, ChangelogOps, ChangelogResult } from './changelog';
-import { GitOps, GitOpsConfig } from './gitOps';
+import { CommitStatus, GitOps, GitOpsConfig, mergeCommitStatus } from './gitOps';
 import { GitParser, GitParserConfig } from './gitParser';
 import { CIContext, Decision, ProjectContext, Versions } from './projectContext';
 import { RuntimeContext } from './runtimeContext';
@@ -91,24 +91,26 @@ export class ProjectOps {
 
   private async buildContextWhenRelease(ctx: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
     let ci: CIContext = { isPushed: false };
-    const vr = await this.fixVersion(ctx.versions.branch, dryRun);
-    const versions: Versions = createVersions(ctx.versions, vr.version);
+    const { files, isChanged, version: fixedVersion } = await this.fixVersion(ctx.versions.branch, dryRun);
+    const versions: Versions = createVersions(ctx.versions, fixedVersion);
     const version = versions.current;
-    if (vr.isChanged) {
-      if (ctx.isTag) {
-        throw `Git tag version doesn't meet with current version in files. Invalid files: [${vr.files}]`;
-      }
-      const versionCommit = await this.gitOps.commitVersionCorrection(ctx.branch, version);
-      const changelog = await this.generateChangelog(ctx.branch, version, dryRun);
-
-      if (versionCommit.isCommitted || changelog.isCommitted) {
-        ci = { ...(await this.gitOps.pushCommit(versionCommit, dryRun)), changelog };
-      }
+    if (isChanged && ctx.isTag) {
+      throw `Git tag version doesn't meet with current version in files. Invalid files: [${files}]`;
     }
-    if (ctx.isReleasePR && ctx.isMerged) {
+    if (isChanged && ctx.isMerged) {
+      throw `Merge too soon, not yet fixed version. Invalid files: [${files}]`;
+    }
+    if (ctx.isMerged) {
       const tag = `${this.projectConfig.gitParserConfig.tagPrefix}${version}`;
       const status = await this.gitOps.tag(tag).then(s => this.gitOps.pushTag(tag, s, dryRun));
       ci = { ...status, needTag: true };
+    } else {
+      const vStatus = isChanged ? await this.gitOps.commitVersionCorrection(ctx.branch, version) : <CommitStatus>{};
+      const changelog = await this.generateChangelog(ctx.branch, version, dryRun);
+      const commitStatus: CommitStatus = mergeCommitStatus(vStatus, changelog);
+      if (commitStatus.isCommitted) {
+        ci = { ...(await this.gitOps.pushCommit(vStatus, dryRun)), changelog };
+      }
     }
     return { ...ctx, version, versions, ci, decision: ProjectOps.makeDecision(ctx, ci) };
   }
@@ -143,8 +145,7 @@ export class ProjectOps {
       const latestTag = await GitOps.getLatestTag(tagPrefix);
       const result = await this.changelogOps.generate(latestTag, tagPrefix + version, dryRun);
       if (result.generated) {
-        const { isPushed, ...status } = await this.gitOps.commit(branch, result.commitMsg);
-        return { ...result, ...status };
+        return { ...result, ...(await this.gitOps.commit(branch, result.commitMsg)) };
       }
       return { ...result, isCommitted: false };
     });
