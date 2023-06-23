@@ -135,5 +135,5 @@ export const getNextVersion = (versions: Versions, nextMode: NextVersionMode) =>
   if (nextMode === 'PATCH') {
     return versions.nextPath!;
   }
-  return null;
+  return undefined;
 };

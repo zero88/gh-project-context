@@ -1,22 +1,14 @@
 import * as core from '@actions/core';
 import { Context } from '@actions/github/lib/context';
-import { ChangelogConfig, ChangelogOps, ChangelogResult } from './changelog';
-import { CommitStatus, GitOps, GitOpsConfig, mergeCommitStatus } from './gitOps';
-import { GitParser, GitParserConfig } from './gitParser';
-import { CIContext, Decision, ProjectContext, Versions } from './projectContext';
+import { ChangelogOps, ChangelogResult } from './changelog';
+import { isPullRequestAvailable, openPullRequest } from './githubApi';
+import { CommitStatus, GitOps, mergeCommitStatus } from './gitOps';
+import { GitParser } from './gitParser';
+import { ProjectConfig } from './projectConfig';
+import { Decision, ProjectContext } from './projectContext';
+import { ReleaseVersionOps } from './releaseVersionOps';
 import { RuntimeContext } from './runtimeContext';
 import { isEmpty } from './utils';
-import { VersionPatternParser } from './versionPatternParser';
-import { createVersions, getNextVersion, VersionResult, VersionStrategy } from './versionStrategy';
-
-export type ProjectConfig = {
-
-  readonly gitParserConfig: GitParserConfig;
-  readonly gitOpsConfig: GitOpsConfig;
-  readonly versionStrategy: VersionStrategy;
-  readonly changelogConfig: ChangelogConfig;
-
-}
 
 export class ProjectOps {
 
@@ -24,16 +16,19 @@ export class ProjectOps {
   private readonly gitParser: GitParser;
   private readonly gitOps: GitOps;
   private readonly changelogOps: ChangelogOps;
+  private readonly versionOps: ReleaseVersionOps;
 
   constructor(projectConfig: ProjectConfig) {
     this.projectConfig = projectConfig;
-    this.gitParser = new GitParser(this.projectConfig.gitParserConfig);
     this.gitOps = new GitOps(this.projectConfig.gitOpsConfig);
-    this.changelogOps = new ChangelogOps(projectConfig.changelogConfig);
+    this.gitParser = new GitParser(this.projectConfig.gitParserConfig);
+    this.changelogOps = new ChangelogOps(this.projectConfig.changelogConfig);
+    this.versionOps = new ReleaseVersionOps(this.projectConfig.versionStrategy);
   }
 
-  private static makeDecision = (context: RuntimeContext, ci: CIContext): Decision => {
-    const build = !context.isClosed && !context.isMerged && !ci.isPushed && !context.isAfterMergedReleasePR;
+  private static makeDecision = (context: RuntimeContext, isPushed: boolean): Decision => {
+    const build = !isPushed && !context.isClosed && !context.isMerged && !context.isAfterMergedReleasePR &&
+                  !context.isReleaseBranch;
     const publish = build && (context.onDefaultBranch || context.isTag);
     return { build, publish };
   };
@@ -59,84 +54,70 @@ export class ProjectOps {
     return context;
   };
 
-  private async searchVersion(branch: string): Promise<VersionResult> {
-    core.info(`Searching version in file...`);
-    const r = await VersionPatternParser.search(this.projectConfig.versionStrategy.versionPatterns, branch);
-    core.info(`Current Version: ${r.version}`);
-    return r;
-  }
-
-  private async fixVersion(expectedVersion: string, dryRun: boolean): Promise<VersionResult> {
-    core.info(`Fixing version to ${expectedVersion}...`);
-    const r = await VersionPatternParser.replace(this.projectConfig.versionStrategy.versionPatterns, expectedVersion,
-      dryRun);
-    core.info(`Fixed ${r.files?.length} file(s): [${r.files}]`);
-    return r;
-  }
-
   private async buildContext(ctx: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
-    return core.group(`[CI::Process] Evaluate context on ${ctx.branch}`,
-      () => ctx.isReleasePR || ctx.isTag
+    return core.group(`[CI::Process] Evaluating context on ${ctx.branch}...`,
+      () => ctx.isReleaseBranch || ctx.isReleasePR || ctx.isTag
         ? this.buildContextWhenRelease(ctx, dryRun)
         : this.buildContextOnAnotherBranch(ctx, dryRun));
   }
 
   private async buildContextOnAnotherBranch(ctx: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
-    const vr = await this.searchVersion(ctx.branch);
-    const needRun = ctx.isAfterMergedReleasePR;
-    const versions: Versions = createVersions(ctx.versions, vr.version, needRun);
-    const ci: CIContext = needRun ? await this.upgradeVersion(ctx.branch, versions, dryRun) : { isPushed: false };
-    return ({ ...ctx, version: versions.current, versions, ci, decision: ProjectOps.makeDecision(ctx, ci) });
+    const result = await this.versionOps.upgrade(ctx, ctx.isAfterMergedReleasePR, dryRun);
+    const pushStatus = await this.commitPushNext(ctx.branch, result.needUpgrade, result.nextVersion, dryRun);
+    return {
+      ...ctx, version: result.versions.current, versions: result.versions,
+      ci: { ...pushStatus, needUpgrade: result.needUpgrade },
+      decision: ProjectOps.makeDecision(ctx, pushStatus.isPushed),
+    };
+  }
+
+  private async commitPushNext(branch: string, needUpgrade: boolean, nextVersion: string | undefined, dryRun: boolean) {
+    if (!needUpgrade) {
+      return { isPushed: false, isCommitted: false };
+    }
+    return await this.gitOps.commitVersionUpgrade(branch, nextVersion!).then(s => this.gitOps.pushCommit(s, dryRun));
   }
 
   private async buildContextWhenRelease(ctx: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
-    let ci: CIContext = { isPushed: false };
-    const { files, isChanged, version: fixedVersion } = await this.fixVersion(ctx.versions.branch, dryRun);
-    const versions: Versions = createVersions(ctx.versions, fixedVersion);
-    const version = versions.current;
-    if (isChanged && ctx.isTag) {
-      throw `Git tag version doesn't meet with current version in files. Invalid files: [${files}]`;
+    const result = await this.versionOps.fix(ctx, dryRun);
+    const version = result.versions.current;
+    const tag = `${this.projectConfig.gitParserConfig.tagPrefix}${version}`;
+    if (result.needTag) {
+      const pushStatus = await this.gitOps.tag(tag).then(s => this.gitOps.pushTag(tag, s, dryRun));
+      return {
+        ...ctx, version, versions: result.versions,
+        ci: { ...pushStatus, mustFixVersion: result.mustFixVersion, needTag: result.needTag },
+        decision: ProjectOps.makeDecision(ctx, pushStatus.isPushed),
+      };
     }
-    if (isChanged && ctx.isMerged) {
-      throw `Merge too soon, not yet fixed version. Invalid files: [${files}]`;
-    }
-    if (ctx.isMerged) {
-      const tag = `${this.projectConfig.gitParserConfig.tagPrefix}${version}`;
-      const status = await this.gitOps.tag(tag).then(s => this.gitOps.pushTag(tag, s, dryRun));
-      ci = { ...status, needTag: true };
-    } else {
-      const vStatus = isChanged ? await this.gitOps.commitVersionCorrection(ctx.branch, version) : <CommitStatus>{};
-      const changelog = await this.generateChangelog(ctx.branch, version, dryRun);
-      const commitStatus: CommitStatus = mergeCommitStatus(vStatus, changelog);
-      if (commitStatus.isCommitted) {
-        ci = { ...(await this.gitOps.pushCommit(vStatus, dryRun)), changelog };
-      }
-    }
-    return { ...ctx, version, versions, ci, decision: ProjectOps.makeDecision(ctx, ci) };
+    const fixedStatus = result.mustFixVersion ? await this.gitOps.commitVersionCorrection(ctx.branch, version) : {};
+    const changelog = await this.generateChangelog(ctx.branch, version, dryRun);
+    const commitStatus = mergeCommitStatus(<CommitStatus>fixedStatus, changelog);
+    const pushStatus = await this.gitOps.pushCommit(commitStatus, dryRun);
+    const isOpenedPR = await this.createReleasePR(ctx.defaultBranch, ctx.branch, result.needPullRequest, tag, dryRun);
+    return {
+      ...ctx, version, versions: result.versions,
+      ci: { ...pushStatus, mustFixVersion: result.mustFixVersion, needPullRequest: isOpenedPR, changelog },
+      decision: ProjectOps.makeDecision(ctx, pushStatus.isPushed),
+    };
   }
 
-  private async upgradeVersion(branch: string, versions: Versions, dryRun: boolean): Promise<CIContext> {
-    const nextMode = this.projectConfig.versionStrategy.nextVersionMode;
-    const nextVersion = getNextVersion(versions, nextMode);
-    if (this.projectConfig.versionStrategy.nextVersionMode === 'NONE') {
-      return { isPushed: false };
+  private async createReleasePR(base: string, head: string, needPR: boolean, tag: string, dryRun: boolean) {
+    if (!needPR) {
+      return needPR;
     }
-    if (nextVersion === versions.current) {
-      core.info('Current version and next version are same. Skip upgrade version');
-      return { isPushed: false };
+    const parameters = { base, head };
+    const isAvailable = await isPullRequestAvailable(parameters);
+    if (!isAvailable && !dryRun) {
+      const token = this.projectConfig.token;
+      if (isEmpty(token)) {
+        core.warning(`GitHub token is required to able to create Pull Request`);
+      } else {
+        await core.group(`[GitHub] Open a Pull Request from ${head} into ${base}`,
+          async () => openPullRequest({ ...parameters, token }, `Release ${tag}`));
+      }
     }
-    if (isEmpty(nextVersion)) {
-      core.warning('Unknown next version. Skip upgrade version');
-      return { isPushed: false };
-    }
-    const vr = await this.fixVersion(nextVersion!, dryRun);
-    if (vr.isChanged) {
-      const status = await this.gitOps
-        .commitVersionUpgrade(branch, nextVersion!)
-        .then(s => this.gitOps.pushCommit(s, dryRun));
-      return { ...status, needUpgrade: true };
-    }
-    return { isPushed: false };
+    return !isAvailable;
   }
 
   private async generateChangelog(branch: string, version: string, dryRun: boolean): Promise<ChangelogResult> {
@@ -144,10 +125,8 @@ export class ProjectOps {
       const tagPrefix = this.projectConfig.gitParserConfig.tagPrefix;
       const latestTag = await GitOps.getLatestTag(tagPrefix);
       const result = await this.changelogOps.generate(latestTag, tagPrefix + version, dryRun);
-      if (result.generated) {
-        return { ...result, ...(await this.gitOps.commit(branch, result.commitMsg)) };
-      }
-      return { ...result, isCommitted: false };
+      const status = result.generated ? await this.gitOps.commit(branch, result.commitMsg!) : { isCommitted: false };
+      return { ...result, ...status };
     });
   }
 }

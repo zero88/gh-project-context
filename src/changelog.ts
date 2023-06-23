@@ -1,7 +1,7 @@
 import path from 'path';
 import { replaceInFile } from 'replace-in-file';
 import { DockerRunCLI } from './docker';
-import { readEnv } from './exec';
+import { RUNNER_ENV } from './githubRunner';
 import { CommitStatus } from './gitOps';
 import { isEmpty, RegexUtils, removeEmptyProperties } from './utils';
 
@@ -24,22 +24,24 @@ export interface ChangelogConfig {
    */
   readonly configFile: string;
   /**
-   * Returns changelog-generator token to query GitHub API:
-   * {@link https://github.com/github-changelog-generator/github-changelog-generator#github-token}
+   * Returns changelog-generator commit message
    */
   readonly commitMsg: string;
   /**
-   * Returns changelog-generator token to query GitHub API:
+   * Returns changelog-generator token to query GitHub API
    * {@link https://github.com/github-changelog-generator/github-changelog-generator#github-token}
    */
   readonly token?: string;
 }
 
-export type ChangelogResult = {
+export interface GeneratedResult {
   readonly generated: boolean;
   readonly latestTag: string;
   readonly releaseTag: string;
-} & Omit<CommitStatus, 'isPushed'>
+  readonly commitMsg?: string;
+}
+
+export type ChangelogResult = GeneratedResult & CommitStatus
 
 const getTag = (tag?: string) => isEmpty(tag) ? '1.16.2' : tag;
 const getImage = (tag?: string) => `githubchangeloggenerator/github-changelog-generator:${getTag(tag)}`;
@@ -51,14 +53,9 @@ const defaultConfig: ChangelogConfig = {
   commitMsg: 'Generated CHANGELOG',
 };
 
-export const createChangelogConfig = (active?: boolean, imageTag?: string, configFile?: string, token?: string,
-  commitMsg?: string): ChangelogConfig => {
-  return {
-    ...defaultConfig, ...removeEmptyProperties({ active, configFile, token, commitMsg, image: getImage(imageTag) }),
-  };
-};
-
-export type GenerateResult = Required<Omit<ChangelogResult, 'commitId' | 'isCommitted'>>;
+export const createChangelogConfig = (active?: boolean, imageTag?: string, configFile?: string, token?: string, commitMsg?: string): ChangelogConfig => ({
+  ...defaultConfig, ...removeEmptyProperties({ active, configFile, token, commitMsg, image: getImage(imageTag) }),
+});
 
 export class ChangelogOps {
   private readonly config: ChangelogConfig;
@@ -67,24 +64,21 @@ export class ChangelogOps {
     this.config = config;
   }
 
-  async generate(latestTag: string, releaseTag: string, dryRun: boolean): Promise<GenerateResult> {
-    const commitMsg = `${this.config.commitMsg} ${releaseTag}`;
-    const workspace = readEnv('GITHUB_WORKSPACE');
+  async generate(latestTag: string, releaseTag: string, dryRun: boolean): Promise<GeneratedResult> {
+    const { workspace, apiUrl, webUrl, owner, repo } = RUNNER_ENV;
     const isExisted = await this.verifyExists(workspace, releaseTag);
     if (isExisted || !this.config.active) {
-      return { latestTag, releaseTag, commitMsg, generated: false };
+      return { latestTag, releaseTag, generated: false };
     }
-    const owner = readEnv('GITHUB_REPOSITORY_OWNER');
-    const repo = readEnv('GITHUB_REPOSITORY');
-    const project = repo.replace(owner + '/', '');
+    const commitMsg = `${this.config.commitMsg} ${releaseTag}`;
     const cmd = [
       `--user`, owner,
-      `--project`, project,
+      `--project`, repo,
       `--config-file`, this.config.configFile,
       `--since-tag`, latestTag,
       `--future-release`, releaseTag,
-      `--github-api`, readEnv('GITHUB_API_URL'),
-      `--github-site`, readEnv('GITHUB_SERVER_URL'),
+      `--github-api`, apiUrl,
+      `--github-site`, webUrl,
     ];
     const envs = { 'CHANGELOG_GITHUB_TOKEN': this.config.token };
     const volumes = { [workspace]: DockerRunCLI.DEFAULT_WORKDIR };
@@ -92,7 +86,7 @@ export class ChangelogOps {
     return { latestTag, releaseTag, commitMsg, generated: dockerRun.success };
   }
 
-  async verifyExists(workspace: string, releaseTag: string): Promise<boolean> {
+  private async verifyExists(workspace: string, releaseTag: string): Promise<boolean> {
     const re = /((base|output)\s?=\s?)(.+)/;
     const result: string[] = [];
     await replaceInFile({

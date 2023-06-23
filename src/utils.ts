@@ -20,6 +20,10 @@ export const isFunction = (func: any): boolean => func && {}.toString.call(func)
 
 export const isArray = (value: any): boolean => isNotNull(value) && Array.isArray(value);
 
+export const isMap = (value: any): boolean => value instanceof Map;
+
+export const isSet = (value: any): boolean => value instanceof Set;
+
 export const isJSON = (value: any): boolean => isObject(value) || isArray(value);
 
 export const isString = (value: any): boolean => typeof value === 'string' || value instanceof String;
@@ -37,6 +41,9 @@ export const isEmpty = (value: any): boolean => {
   if (isNull(value)) {
     return true;
   }
+  if (isMap(value) || isSet(value)) {
+    return value.size === 0;
+  }
   if (isArray(value)) {
     return value.length === 0;
   }
@@ -48,6 +55,8 @@ export const isEmpty = (value: any): boolean => {
   }
   return value.toString().trim() === '';
 };
+
+export const isNotEmpty = (value: any): boolean => !isEmpty(value);
 
 export const convertToNumber = (value: any, strict: boolean = false): number | null => {
   if (isNull(value)) {
