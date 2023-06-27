@@ -30,12 +30,13 @@ const getBaseUrl = (baseUrl: string | undefined) => {
 };
 
 const getPullRequests = async (parameters: PullRequestParameter) => {
+  const owner = parameters.owner ?? RUNNER_ENV.owner;
   return request('GET /repos/{owner}/{repo}/pulls', {
     ...createHeaders(parameters.token),
     ...getBaseUrl(parameters.baseUrl),
-    owner: parameters.owner ?? RUNNER_ENV.repo,
+    owner: owner,
     repo: parameters.repo ?? RUNNER_ENV.repo,
-    head: `${parameters.owner}:${parameters.head}`,
+    head: `${owner}:${parameters.head}`,
     base: parameters.base,
     state: 'open',
     sort: 'created',
@@ -52,12 +53,13 @@ const isPullRequestAvailable = async (parameters: PullRequestParameter): Promise
   });
 
 const openPullRequest = async (parameters: PullRequestParameter, title: string): Promise<void> => {
+  const owner = parameters.owner ?? RUNNER_ENV.owner;
   const options = {
     ...createHeaders(parameters.token),
     ...getBaseUrl(parameters.baseUrl),
-    owner: parameters.owner ?? RUNNER_ENV.owner,
+    owner: owner,
     repo: parameters.repo ?? RUNNER_ENV.repo,
-    head: `${parameters.owner}:${parameters.head}`,
+    head: `${owner}:${parameters.head}`,
     base: parameters.base,
     title,
   };
