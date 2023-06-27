@@ -52,14 +52,15 @@ const run = (ghContext: Context) => {
     getInputString('userEmail'),
     getInputBool('mustSign'),
     getInputString('nextVerMsg'));
-  const dryRun = getInputBool('dry');
   const changelogConfig = createChangelogConfig(
     getInputBool('changelog', false),
     getInputString('changelogImageTag', false),
     getInputString('changelogConfigFile', false),
     getInputString('changelogToken', false),
     getInputString('changelogMsg', false));
-  const ops = new ProjectOps({ gitParserConfig, versionStrategy, gitOpsConfig, changelogConfig });
+  const token = getInputString('token', false);
+  const dryRun = getInputBool('dry');
+  const ops = new ProjectOps({ gitParserConfig, versionStrategy, gitOpsConfig, changelogConfig, token });
   core.group('Loading...', () => ops.process(ghContext, dryRun))
     .then(ghOutput => setActionOutput(ghOutput))
     .catch(error => core.setFailed(error));

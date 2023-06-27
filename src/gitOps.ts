@@ -86,20 +86,31 @@ export const createGitOpsConfig = (allowCommit: boolean, allowTag: boolean, pref
 
 export interface CommitStatus {
   isCommitted: boolean;
+  /**
+   * Commit id
+   */
   commitId?: string;
+  /**
+   * Commit message
+   */
   commitMsg?: string;
 }
+
+export interface CommitPushStatus extends CommitStatus {
+  /**
+   * Check whether if the changes/tags is pushed to remote
+   */
+  isPushed: boolean;
+}
+
 
 export const mergeCommitStatus = (status1: CommitStatus, status2: CommitStatus): CommitStatus => ({
   isCommitted: status1.isCommitted || status1.isCommitted,
   commitId: status1.commitId ?? status2.commitId,
   commitMsg: status1.commitMsg ?? status2.commitMsg,
 });
-
-export type CommitPushStatus = CommitStatus & { isPushed: boolean };
-
 /**
- * Represents for Git CI interactor like: commit, push, tag
+ * Represents for Git CI operations like: commit, push, tag
  */
 export class GitOps {
 
