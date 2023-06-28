@@ -103,12 +103,12 @@ export interface CommitPushStatus extends CommitStatus {
   isPushed: boolean;
 }
 
-
 export const mergeCommitStatus = (status1: CommitStatus, status2: CommitStatus): CommitStatus => ({
-  isCommitted: status1.isCommitted || status1.isCommitted,
+  isCommitted: status1.isCommitted || status2.isCommitted,
   commitId: status1.commitId ?? status2.commitId,
   commitMsg: status1.commitMsg ?? status2.commitMsg,
 });
+
 /**
  * Represents for Git CI operations like: commit, push, tag
  */
@@ -180,6 +180,7 @@ export class GitOps {
     const commitArgs = ['commit', ...this.config.mustSign ? ['-S'] : [], '-a', '-m', commitMsg];
     return core.group(`[GIT Commit] ${commitMsg}`,
       () => GitOps.checkoutBranch(branch)
+        .then(() => GitOps.addChanges())
         .then(() => this.configGitUser())
         .then(gc => strictExec('git', [...gc, ...commitArgs], `Cannot commit`))
         .then(
@@ -202,6 +203,10 @@ export class GitOps {
     await strictExec('git', ['fetch', '--depth=1'], 'Cannot fetch');
     await strictExec('git', ['checkout', branch!], 'Cannot checkout');
   };
+
+  private static async addChanges() {
+    await GitOps.lenientExec(['add', '--all', '.']);
+  }
 
   private static async lenientExec(args: string[], fallback: string = ''): Promise<string> {
     const r = await exec('git', args);
