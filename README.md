@@ -23,8 +23,10 @@ The usual example
 
 ```yaml
 on:
+  create:
+    branches: [ 'release/**' ] ## To create a release PR
   push:
-    branches: ## On main branch and all release branches 
+    branches: ## On main branch and/or all release branches (optional) 
       - main
       - release/**
     tags: [ 'v*' ] ## Release tag version

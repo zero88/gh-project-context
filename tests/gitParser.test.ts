@@ -6,7 +6,8 @@ import * as onMergedPRContext from './resources/github/@action.gh.pr.merged.json
 import * as onOpenPRContext from './resources/github/@action.gh.pr.open.json';
 import * as onPushAfterMergeReleaseContext from './resources/github/@action.gh.push.after.mergeRelease.json';
 import * as onPushOnDefaultContext from './resources/github/@action.gh.push.json';
-import * as onPushReleaseBranchContext from './resources/github/@action.gh.push.release.json';
+import * as onCreateReleaseBranchContext from './resources/github/@action.gh.release.branch.create.json';
+import * as onPushReleaseBranchContext from './resources/github/@action.gh.release.branch.push.json';
 import * as onCloseReleasePRContext from './resources/github/@action.gh.release.pr.closed.json';
 import * as onMergeReleasePRContext from './resources/github/@action.gh.release.pr.merged.json';
 import * as onOpenReleasePRContext from './resources/github/@action.gh.release.pr.open.json';
@@ -57,6 +58,27 @@ const expectedPushOnReleaseBranch = {
   'shortCommitId': 'ceba909',
   'versions': {
     'branch': '1.0.11',
+  },
+};
+
+
+const expectedCreateOnReleaseBranch = {
+  'branch': 'release/1.0.12',
+  'commitId': 'bcc2dd741f4ed103317d53454f7271c5a555b446',
+  "commitMsg": undefined,
+  'defaultBranch': 'main',
+  'isAfterMergedReleasePR': false,
+  'isClosed': false,
+  'isManualOrSchedule': false,
+  'isMerged': false,
+  'isPR': false,
+  'isReleaseBranch': true,
+  'isReleasePR': false,
+  'isTag': false,
+  'onDefaultBranch': false,
+  'shortCommitId': 'bcc2dd7',
+  'versions': {
+    'branch': '1.0.12',
   },
 };
 
@@ -204,6 +226,7 @@ test.each`
   ${`On Push On default branch`}      | ${onPushOnDefaultContext}         | ${expectedOnPushOnDefault}
   ${`On Open normal Pull Request`}    | ${onOpenPRContext}                | ${expectedOpenPR}
   ${`On Merge normal Pull Request`}   | ${onMergedPRContext}              | ${expectedMergedPR}
+  ${`On Create On release branch`}    | ${onCreateReleaseBranchContext}   | ${expectedCreateOnReleaseBranch}
   ${`On Push On release branch`}      | ${onPushReleaseBranchContext}     | ${expectedPushOnReleaseBranch}
   ${`On Close Release Pull Request`}  | ${onCloseReleasePRContext}        | ${expectedOnClosedReleasePR}
   ${`On Open Release Pull Request`}   | ${onOpenReleasePRContext}         | ${expectedOpenReleasePR}

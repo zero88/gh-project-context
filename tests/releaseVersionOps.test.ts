@@ -6,11 +6,22 @@ import { RuntimeContext } from '../src/runtimeContext';
 import { createVersionStrategy } from '../src/versionStrategy';
 import { runnerContext } from './mocks/githubRunnerMocks';
 import * as onPushAfterMergeReleaseContext from './resources/github/@action.gh.push.after.mergeRelease.json';
-import * as onPushReleaseBranchContext from './resources/github/@action.gh.push.release.json';
+import * as onCreateReleaseBranchContext from './resources/github/@action.gh.release.branch.create.json';
+import * as onPushReleaseBranchContext from './resources/github/@action.gh.release.branch.push.json';
 import * as onCloseReleasePRContext from './resources/github/@action.gh.release.pr.closed.json';
 import * as onMergeReleasePRContext from './resources/github/@action.gh.release.pr.merged.json';
 import * as onOpenReleasePRContext from './resources/github/@action.gh.release.pr.open.json';
 import * as onTagContext from './resources/github/@action.gh.tag.json';
+
+const expectedCreateOnReleaseBranch: FixedResult = {
+  'mustFixVersion': true,
+  'needPullRequest': true,
+  'needTag': false,
+  'versions': {
+    'branch': '1.0.12',
+    'current': '1.0.12',
+  },
+}
 
 const expectedPushOnReleaseBranch: FixedResult = {
   'mustFixVersion': true,
@@ -58,6 +69,7 @@ describe(`Fix version on release with changes`, () => {
 
   test.each`
   label                               | context                           | expected
+  ${`On Create On release branch`}    | ${onCreateReleaseBranchContext}   | ${expectedCreateOnReleaseBranch}
   ${`On Push On release branch`}      | ${onPushReleaseBranchContext}     | ${expectedPushOnReleaseBranch}
   ${`On Close Release Pull Request`}  | ${onCloseReleasePRContext}        | ${expectedOnClosedReleasePR}
   ${`On Open Release Pull Request`}   | ${onOpenReleasePRContext}         | ${expectedOpenReleasePR}
