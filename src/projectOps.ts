@@ -49,16 +49,17 @@ export class ProjectOps {
 
   private removeBranchIfNeed = async (context: ProjectContext, dryRun: boolean): Promise<ProjectContext> => {
     if (context.isPR && context.isMerged && !dryRun) {
-      await GitOps.removeRemoteBranch(context.branch);
+      await core.group(`[CI::Process] Removing branch ${context.branch}...`,
+        () => GitOps.removeRemoteBranch(context.branch));
     }
     return context;
   };
 
-  private async buildContext(ctx: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
-    return core.group(`[CI::Process] Evaluating context on ${ctx.branch}...`,
-      () => ctx.isReleaseBranch || ctx.isReleasePR || ctx.isTag
-        ? this.buildContextWhenRelease(ctx, dryRun)
-        : this.buildContextOnAnotherBranch(ctx, dryRun));
+  private async buildContext(context: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
+    return core.group(`[CI::Process] Evaluating context on ${context.branch}...`,
+      () => context.isReleaseBranch || context.isReleasePR || context.isTag
+        ? this.buildContextWhenRelease(context, dryRun)
+        : this.buildContextOnAnotherBranch(context, dryRun));
   }
 
   private async buildContextOnAnotherBranch(ctx: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
@@ -106,28 +107,29 @@ export class ProjectOps {
     if (!needPR) {
       return needPR;
     }
-    const parameters = { base, head };
-    const isAvailable = await isPullRequestAvailable(parameters);
-    if (!isAvailable && !dryRun) {
-      const token = this.projectConfig.token;
-      if (isEmpty(token)) {
-        core.warning(`GitHub token is required to able to create Pull Request`);
+    return core.group(`[GitHub] Opening a Pull Request from ${head} into ${base}...`, async () => {
+      const parameters = { base, head };
+      const isAvailable = await isPullRequestAvailable(parameters);
+      if (isAvailable || dryRun) {
+        core.info(`[GitHub] Pull request is available or in dry-run mode. Skip to create Pull request.`);
       } else {
-        await core.group(`[GitHub] Open a Pull Request from ${head} into ${base}`,
-          async () => openPullRequest({ ...parameters, token }, `Release ${tag}`));
+        const token = this.projectConfig.token;
+        if (isEmpty(token)) {
+          core.warning(`[GitHub] GitHub token is required to able to create new Pull Request.`);
+        } else {
+          await openPullRequest({ ...parameters, token }, `Release ${tag}`);
+        }
       }
-    }
-    return !isAvailable;
+      return !isAvailable;
+    });
   }
 
   private async generateChangelog(branch: string, version: string, dryRun: boolean): Promise<ChangelogResult> {
-    return core.group(`[CHANGELOG] Generating CHANGELOG ${version}...`, async () => {
-      const tagPrefix = this.projectConfig.gitParserConfig.tagPrefix;
-      const latestTag = await GitOps.getLatestTag(tagPrefix);
-      const result = await this.changelogOps.generate(latestTag, tagPrefix + version, dryRun);
-      const status = result.generated ? await this.gitOps.commit(branch, result.commitMsg!) : { isCommitted: false };
-      return { ...result, ...status };
-    });
+    const tagPrefix = this.projectConfig.gitParserConfig.tagPrefix;
+    const latestTag = await GitOps.getLatestTag(tagPrefix);
+    const result = await this.changelogOps.generate(latestTag, tagPrefix + version, dryRun);
+    const status = result.generated ? await this.gitOps.commit(branch, result.commitMsg!) : { isCommitted: false };
+    return { ...result, ...status };
   }
 }
 

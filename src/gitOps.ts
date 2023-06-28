@@ -147,7 +147,7 @@ export class GitOps {
     }
     const commitMsg = `${this.config.releaseVerMsg} ${tag}`;
     const signArgs = this.config.mustSign ? ['-s'] : [];
-    return core.group(`[GIT Tag] Tag new version ${tag}...`, () =>
+    return core.group(`[GIT Tag] Tagging new version ${tag}...`, () =>
       strictExec('git', ['fetch', '--depth=1'], 'Cannot fetch')
         .then(ignore => strictExec('git', ['rev-parse', '--short', 'HEAD'], 'Cannot show last commit'))
         .then(r => r.stdout)
