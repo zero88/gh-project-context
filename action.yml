@@ -73,6 +73,9 @@ inputs:
     description: 'CI: Next version mode to choose for upgrading version after merged release PR. One of: MAJOR|MINOR|PATCH|NONE'
     required: false
     default: NONE
+  token:
+    description: 'GitHub token to query GitHub API, that is used in changelog generator and Pull Request creator'
+    required: false
   dry:
     description: 'CI: Dry run. If `true`, action will run without do modify files or git commit/tag'
     required: true

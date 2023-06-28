@@ -35,6 +35,7 @@ const setActionOutput = async (projectContext: ProjectContext) => {
 
 const run = (ghContext: Context) => {
   core.debug(`The GitHub context: ${JSON.stringify(ghContext, undefined, 2)}`);
+  const token = getInputString('token', false);
   const gitParserConfig = createGitParserConfig(
     getInputString('defaultBranch'),
     getInputString('tagPrefix'),
@@ -56,9 +57,8 @@ const run = (ghContext: Context) => {
     getInputBool('changelog', false),
     getInputString('changelogImageTag', false),
     getInputString('changelogConfigFile', false),
-    getInputString('changelogToken', false),
+    getInputString('changelogToken', false) ?? token,
     getInputString('changelogMsg', false));
-  const token = getInputString('token', false);
   const dryRun = getInputBool('dry');
   const ops = new ProjectOps({ gitParserConfig, versionStrategy, gitOpsConfig, changelogConfig, token });
   core.group('Loading...', () => ops.process(ghContext, dryRun))
