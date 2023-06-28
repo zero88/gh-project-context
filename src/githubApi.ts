@@ -52,7 +52,7 @@ const isPullRequestAvailable = async (parameters: PullRequestParameter): Promise
     return isNotEmpty(pr);
   });
 
-const openPullRequest = async (parameters: PullRequestParameter, title: string): Promise<void> => {
+const openPullRequest = async (parameters: PullRequestParameter, title: string): Promise<string> => {
   const owner = parameters.owner ?? RUNNER_ENV.owner;
   const options = {
     ...createHeaders(parameters.token),
@@ -64,8 +64,14 @@ const openPullRequest = async (parameters: PullRequestParameter, title: string):
     title,
   };
   return request('POST /repos/{owner}/{repo}/pulls', options)
-    .then(resp => core.debug(JSON.stringify(resp.data)))
-    .catch(err => core.error('Cannot open PR: ' + JSON.stringify(err)));
+    .then(resp => {
+      core.debug(JSON.stringify(resp.data));
+      return resp.data.html_url;
+    })
+    .catch(err => {
+      core.error('Cannot open PR: ' + JSON.stringify(err));
+      return '';
+    });
 };
 
 export { PullRequestParameter, getPullRequests, isPullRequestAvailable, openPullRequest };

@@ -117,7 +117,8 @@ export class ProjectOps {
         if (isEmpty(token)) {
           core.warning(`[GitHub] GitHub token is required to able to create new Pull Request.`);
         } else {
-          await openPullRequest({ ...parameters, token }, `Release ${tag}`);
+          const url = await openPullRequest({ ...parameters, token }, `Release ${tag}`);
+          core.info(`[GitHub] New Pull request: ${url}`);
         }
       }
       return !isAvailable;
