@@ -10,6 +10,21 @@ import { ReleaseVersionOps } from './releaseVersionOps';
 import { RuntimeContext } from './runtimeContext';
 import { isEmpty } from './utils';
 
+const makeDecision = (context: RuntimeContext, isPushed: boolean): Decision => {
+  const build = !isPushed && !context.isClosed && !context.isMerged && !context.isAfterMergedReleasePR &&
+                !context.isReleaseBranch;
+  const publish = build && (context.onDefaultBranch || context.isTag);
+  return { build, publish };
+};
+
+const normalizeCommitMsg = async (context: RuntimeContext): Promise<RuntimeContext> => {
+  if (!isEmpty(context.commitMsg)) {
+    return context;
+  }
+  const commitMsg = await GitOps.getCommitMsg(context.commitId);
+  return ({ ...context, commitMsg });
+};
+
 export class ProjectOps {
 
   readonly projectConfig: ProjectConfig;
@@ -26,26 +41,20 @@ export class ProjectOps {
     this.versionOps = new ReleaseVersionOps(this.projectConfig.versionStrategy);
   }
 
-  private static makeDecision = (context: RuntimeContext, isPushed: boolean): Decision => {
-    const build = !isPushed && !context.isClosed && !context.isMerged && !context.isAfterMergedReleasePR &&
-                  !context.isReleaseBranch;
-    const publish = build && (context.onDefaultBranch || context.isTag);
-    return { build, publish };
-  };
-
-  private static normalizeCommitMsg = async (context: RuntimeContext): Promise<RuntimeContext> => {
-    if (!isEmpty(context.commitMsg)) {
-      return context;
-    }
-    const commitMsg = await GitOps.getCommitMsg(context.commitId);
-    return ({ ...context, commitMsg });
-  };
-
   process(ghContext: Context, dryRun: boolean): Promise<ProjectContext> {
-    return ProjectOps.normalizeCommitMsg(this.gitParser.parse(ghContext))
+    return this.parse(ghContext)
       .then(runtime => this.buildContext(runtime, dryRun))
       .then(ctx => this.removeBranchIfNeed(ctx, dryRun));
   };
+
+  private parse(ghContext: Context): Promise<RuntimeContext> {
+    return core.group('[CI::Process] Runtime context',
+      async () => {
+        const runtime = await normalizeCommitMsg(this.gitParser.parse(ghContext));
+        core.info(JSON.stringify(runtime, Object.keys(runtime).sort(), 2));
+        return runtime;
+      });
+  }
 
   private removeBranchIfNeed = async (context: ProjectContext, dryRun: boolean): Promise<ProjectContext> => {
     if (context.isPR && context.isMerged && !dryRun) {
@@ -68,7 +77,7 @@ export class ProjectOps {
     return {
       ...ctx, version: result.versions.current, versions: result.versions,
       ci: { ...pushStatus, needUpgrade: result.needUpgrade },
-      decision: ProjectOps.makeDecision(ctx, pushStatus.isPushed),
+      decision: makeDecision(ctx, pushStatus.isPushed),
     };
   }
 
@@ -88,7 +97,7 @@ export class ProjectOps {
       return {
         ...ctx, version, versions: result.versions,
         ci: { ...pushStatus, mustFixVersion: result.mustFixVersion, needTag: result.needTag },
-        decision: ProjectOps.makeDecision(ctx, pushStatus.isPushed),
+        decision: makeDecision(ctx, pushStatus.isPushed),
       };
     }
     const fixedStatus = result.mustFixVersion ? await this.gitOps.commitVersionCorrection(ctx.branch, version) : {};
@@ -99,7 +108,7 @@ export class ProjectOps {
     return {
       ...ctx, version, versions: result.versions,
       ci: { ...pushStatus, mustFixVersion: result.mustFixVersion, needPullRequest: isOpenedPR, changelog },
-      decision: ProjectOps.makeDecision(ctx, pushStatus.isPushed),
+      decision: makeDecision(ctx, pushStatus.isPushed),
     };
   }
 

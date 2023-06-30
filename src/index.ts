@@ -20,7 +20,7 @@ const getInputNumber = (inputName: string, required: boolean = true): number => 
 
 const setActionOutput = async (projectContext: ProjectContext) => {
   const { ci, decision, versions, version, ...rest } = projectContext;
-  await core.group('Project context', async () => core.info(JSON.stringify(rest, Object.keys(rest).sort(), 2)));
+  core.debug('Project context :::' + JSON.stringify(rest, Object.keys(rest).sort(), 2));
   if (versions) {
     await core.group('Version context', async () => core.info(JSON.stringify({ ...versions, version }, undefined, 2)));
   }
