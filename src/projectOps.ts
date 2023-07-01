@@ -8,7 +8,7 @@ import { ProjectConfig } from './projectConfig';
 import { Decision, ProjectContext } from './projectContext';
 import { ReleaseVersionOps } from './releaseVersionOps';
 import { RuntimeContext } from './runtimeContext';
-import { isEmpty } from './utils';
+import { isEmpty, prettier } from './utils';
 
 const makeDecision = (context: RuntimeContext, isPushed: boolean): Decision => {
   const build = !isPushed && !context.isClosed && !context.isMerged && !context.isAfterMergedReleasePR &&
@@ -50,6 +50,7 @@ export class ProjectOps {
   private parse(ghContext: Context): Promise<RuntimeContext> {
     return core.group('[CI::Process] Runtime context',
       async () => {
+        core.debug(`The GitHub context: ${prettier(ghContext, 'nope')}`);
         const runtime = await normalizeCommitMsg(this.gitParser.parse(ghContext));
         core.info(JSON.stringify(runtime, Object.keys(runtime).sort(), 2));
         return runtime;

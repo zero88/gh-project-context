@@ -58,6 +58,13 @@ export const isEmpty = (value: any): boolean => {
 
 export const isNotEmpty = (value: any): boolean => !isEmpty(value);
 
+export const emptyOrElse = <T>(value: T, fallback: T): T => isEmpty(value) ? fallback : value;
+
+export const prettier = (value: any, sort: 'asc' | 'desc' | 'nope' = 'asc', indent = 2): string =>
+  JSON.stringify(value,
+    sort === 'nope' ? undefined : (sort === 'desc' ? Object.keys(value).reverse() : Object.keys(value).sort()),
+    indent);
+
 export const convertToNumber = (value: any, strict: boolean = false): number | null => {
   if (isNull(value)) {
     return null;
