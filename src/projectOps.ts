@@ -102,7 +102,7 @@ export class ProjectOps {
       };
     }
     const fixedStatus = result.mustFixVersion ? await this.gitOps.commitVersionCorrection(ctx.branch, version) : {};
-    const changelog = await this.generateChangelog(ctx.branch, version, dryRun);
+    const changelog = await this.genChangelog(ctx.branch, ctx.isTag, version, dryRun);
     const commitStatus = mergeCommitStatus(<CommitStatus>fixedStatus, changelog);
     const pushStatus = await this.gitOps.pushCommit(commitStatus, dryRun);
     const isOpenedPR = await this.createReleasePR(ctx.defaultBranch, ctx.branch, result.needPullRequest, tag, dryRun);
@@ -135,12 +135,18 @@ export class ProjectOps {
     });
   }
 
-  private async generateChangelog(branch: string, version: string, dryRun: boolean): Promise<ChangelogResult> {
+  private async genChangelog(branch: string, isTag: boolean, version: string, dry: boolean): Promise<ChangelogResult> {
     const tagPrefix = this.projectConfig.gitParserConfig.tagPrefix;
     const latestTag = await GitOps.getLatestTag(tagPrefix);
-    const result = await this.changelogOps.generate(latestTag, tagPrefix + version, dryRun);
-    const status = result.generated ? await this.gitOps.commit(branch, result.commitMsg!) : { isCommitted: false };
-    return { ...result, ...status };
+    const releaseTag = tagPrefix + version;
+    const result = await this.changelogOps.generate(latestTag, releaseTag, dry);
+    if (result.generated) {
+      if (isTag) {
+        throw `Changelog [${releaseTag}] is missing in tag`;
+      }
+      return { ...result, ...(await this.gitOps.commit(branch, result.commitMsg!)) };
+    }
+    return { ...result, isCommitted: false };
   }
 }
 
