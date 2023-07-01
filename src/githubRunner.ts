@@ -17,8 +17,8 @@ const load = (): GithubRunnerEnv => {
     fqnRepo: fqnRepo,
     owner: owner,
     repo: fqnRepo.replace(owner + '/', ''),
-    apiUrl: readEnv('GITHUB_REPOSITORY_OWNER'),
-    webUrl: readEnv('GITHUB_REPOSITORY_OWNER'),
+    apiUrl: readEnv('GITHUB_API_URL'),
+    webUrl: readEnv('GITHUB_SERVER_URL'),
   };
 };
 

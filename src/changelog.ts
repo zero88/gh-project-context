@@ -1,3 +1,4 @@
+import * as core from '@actions/core';
 import path from 'path';
 import { replaceInFile } from 'replace-in-file';
 import { DockerRunCLI } from './docker';
@@ -53,7 +54,8 @@ const defaultConfig: ChangelogConfig = {
   commitMsg: 'Generated CHANGELOG',
 };
 
-export const createChangelogConfig = (active?: boolean, imageTag?: string, configFile?: string, token?: string, commitMsg?: string): ChangelogConfig => ({
+export const createChangelogConfig = (active?: boolean, imageTag?: string, configFile?: string, token?: string,
+  commitMsg?: string): ChangelogConfig => ({
   ...defaultConfig, ...removeEmptyProperties({ active, configFile, token, commitMsg, image: getImage(imageTag) }),
 });
 
@@ -65,25 +67,31 @@ export class ChangelogOps {
   }
 
   async generate(latestTag: string, releaseTag: string, dryRun: boolean): Promise<GeneratedResult> {
-    const { workspace, apiUrl, webUrl, owner, repo } = RUNNER_ENV;
-    const isExisted = await this.verifyExists(workspace, releaseTag);
-    if (isExisted || !this.config.active) {
+    if (!this.config.active) {
       return { latestTag, releaseTag, generated: false };
     }
-    const commitMsg = `${this.config.commitMsg} ${releaseTag}`;
-    const cmd = [
-      `--user`, owner,
-      `--project`, repo,
-      `--config-file`, this.config.configFile,
-      `--since-tag`, latestTag,
-      `--future-release`, releaseTag,
-      `--github-api`, apiUrl,
-      `--github-site`, webUrl,
-    ];
-    const envs = { 'CHANGELOG_GITHUB_TOKEN': this.config.token };
-    const volumes = { [workspace]: DockerRunCLI.DEFAULT_WORKDIR };
-    const dockerRun = await DockerRunCLI.execute(this.config.image, cmd, envs, volumes);
-    return { latestTag, releaseTag, commitMsg, generated: dockerRun.success };
+    return core.group(`[CHANGELOG] Generating CHANGELOG ${releaseTag}...`, async () => {
+      const { workspace, apiUrl, webUrl, owner, repo } = RUNNER_ENV;
+      const isExisted = await this.verifyExists(workspace, releaseTag);
+      if (isExisted) {
+        core.info(`[CHANGELOG] ${releaseTag} changelog is existed. Skip to generate CHANGELOG.`);
+        return { latestTag, releaseTag, generated: false };
+      }
+      const commitMsg = `${this.config.commitMsg} ${releaseTag}`;
+      const cmd = [
+        `--user`, owner,
+        `--project`, repo,
+        `--config-file`, this.config.configFile,
+        `--since-tag`, latestTag,
+        `--future-release`, releaseTag,
+        `--github-api`, apiUrl,
+        `--github-site`, webUrl,
+      ];
+      const envs = { 'CHANGELOG_GITHUB_TOKEN': this.config.token };
+      const volumes = { [workspace]: DockerRunCLI.DEFAULT_WORKDIR };
+      const dockerRun = await DockerRunCLI.execute(this.config.image, cmd, envs, volumes);
+      return { latestTag, releaseTag, commitMsg, generated: dockerRun.success };
+    });
   }
 
   private async verifyExists(workspace: string, releaseTag: string): Promise<boolean> {

@@ -28,7 +28,7 @@ test('open pull requests', async () => {
   };
   const isAvailable = await isPullRequestAvailable(parameters);
   expect(isAvailable).toEqual(false);
-  await openPullRequest({
+  const url = await openPullRequest({
     ...parameters,
     token: '0000000000000000000000000000000000000001',
   }, 'Release v1.0.11');
@@ -39,4 +39,5 @@ test('open pull requests', async () => {
   expect(await mockedRequest.json()).toEqual({
     head: 'octocat:release/1.0.11', base: 'main', title: 'Release v1.0.11',
   });
+  expect(url).toEqual(`https://github.com/octocat/Hello-World/pull/1347`);
 });

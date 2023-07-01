@@ -6,7 +6,7 @@ import { createGitOpsConfig } from './gitOps';
 import { createGitParserConfig } from './gitParser';
 import { ProjectContext } from './projectContext';
 import { ProjectOps } from './projectOps';
-import { flatten } from './utils';
+import { emptyOrElse, flatten, prettier } from './utils';
 import { createVersionStrategy } from './versionStrategy';
 
 const getInputBool = (inputName: string, _default: boolean = false): boolean => {
@@ -20,21 +20,21 @@ const getInputNumber = (inputName: string, required: boolean = true): number => 
 
 const setActionOutput = async (projectContext: ProjectContext) => {
   const { ci, decision, versions, version, ...rest } = projectContext;
-  await core.group('Project context', async () => core.info(JSON.stringify(rest, Object.keys(rest).sort(), 2)));
+  core.debug('Project context :::' + prettier(rest));
   if (versions) {
-    await core.group('Version context', async () => core.info(JSON.stringify({ ...versions, version }, undefined, 2)));
+    await core.group('Version context', async () => core.info(prettier({ ...versions, version }, 'nope')));
   }
   if (ci) {
-    await core.group('CI context', async () => core.info(JSON.stringify(ci, Object.keys(ci).sort(), 2)));
+    await core.group('CI context', async () => core.info(prettier(ci)));
   }
-  await core.group('CI decision', async () => core.info(JSON.stringify(decision, undefined, 2)));
+  await core.group('CI decision', async () => core.info(prettier(decision, 'nope')));
   const outputs = flatten(projectContext);
-  await core.group('Action Output', async () => core.info(JSON.stringify(outputs, Object.keys(outputs).sort(), 2)));
+  await core.group('Action Output', async () => core.info(prettier(outputs)));
   Object.keys(outputs).forEach(k => core.setOutput(k, outputs[k]));
 };
 
-const run = (ghContext: Context) => {
-  core.debug(`The GitHub context: ${JSON.stringify(ghContext, undefined, 2)}`);
+const loadConfig: () => { dryRun: boolean; ops: ProjectOps } = () => {
+  const token = getInputString('token', false);
   const gitParserConfig = createGitParserConfig(
     getInputString('defaultBranch'),
     getInputString('tagPrefix'),
@@ -56,12 +56,16 @@ const run = (ghContext: Context) => {
     getInputBool('changelog', false),
     getInputString('changelogImageTag', false),
     getInputString('changelogConfigFile', false),
-    getInputString('changelogToken', false),
+    emptyOrElse(getInputString('changelogToken', false), token),
     getInputString('changelogMsg', false));
-  const token = getInputString('token', false);
   const dryRun = getInputBool('dry');
   const ops = new ProjectOps({ gitParserConfig, versionStrategy, gitOpsConfig, changelogConfig, token });
-  core.group('Loading...', () => ops.process(ghContext, dryRun))
+  return { dryRun, ops };
+};
+
+const run = async (ghContext: Context) => {
+  return core.group('Loading Action configuration...', async () => loadConfig())
+    .then(({ dryRun, ops }) => ops.process(ghContext, dryRun))
     .then(ghOutput => setActionOutput(ghOutput))
     .catch(error => core.setFailed(error));
 };

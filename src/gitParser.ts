@@ -78,7 +78,7 @@ export class GitParser {
                                                             context.payload.pull_request?.merged === false;
 
   static checkReleaseBranch = (event: string, branch: string, releaseBranchPrefix: string): boolean =>
-    event === 'push' && branch?.startsWith(releaseBranchPrefix);
+    ['push', 'create'].includes(event) && branch?.startsWith(releaseBranchPrefix);
 
   static checkReleasePR = (event: string, branch: string, releaseBranchPrefix: string): boolean =>
     GitParser.checkPR(event) && branch?.startsWith(releaseBranchPrefix);

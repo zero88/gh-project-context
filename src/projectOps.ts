@@ -8,7 +8,22 @@ import { ProjectConfig } from './projectConfig';
 import { Decision, ProjectContext } from './projectContext';
 import { ReleaseVersionOps } from './releaseVersionOps';
 import { RuntimeContext } from './runtimeContext';
-import { isEmpty } from './utils';
+import { isEmpty, prettier } from './utils';
+
+const makeDecision = (context: RuntimeContext, isPushed: boolean): Decision => {
+  const build = !isPushed && !context.isClosed && !context.isMerged && !context.isAfterMergedReleasePR &&
+                !context.isReleaseBranch;
+  const publish = build && (context.onDefaultBranch || context.isTag);
+  return { build, publish };
+};
+
+const normalizeCommitMsg = async (context: RuntimeContext): Promise<RuntimeContext> => {
+  if (!isEmpty(context.commitMsg)) {
+    return context;
+  }
+  const commitMsg = await GitOps.getCommitMsg(context.commitId);
+  return ({ ...context, commitMsg });
+};
 
 export class ProjectOps {
 
@@ -26,39 +41,35 @@ export class ProjectOps {
     this.versionOps = new ReleaseVersionOps(this.projectConfig.versionStrategy);
   }
 
-  private static makeDecision = (context: RuntimeContext, isPushed: boolean): Decision => {
-    const build = !isPushed && !context.isClosed && !context.isMerged && !context.isAfterMergedReleasePR &&
-                  !context.isReleaseBranch;
-    const publish = build && (context.onDefaultBranch || context.isTag);
-    return { build, publish };
-  };
-
-  private static normalizeCommitMsg = async (context: RuntimeContext): Promise<RuntimeContext> => {
-    if (!isEmpty(context.commitMsg)) {
-      return context;
-    }
-    const commitMsg = await GitOps.getCommitMsg(context.commitId);
-    return ({ ...context, commitMsg });
-  };
-
   process(ghContext: Context, dryRun: boolean): Promise<ProjectContext> {
-    return ProjectOps.normalizeCommitMsg(this.gitParser.parse(ghContext))
+    return this.parse(ghContext)
       .then(runtime => this.buildContext(runtime, dryRun))
       .then(ctx => this.removeBranchIfNeed(ctx, dryRun));
   };
 
+  private parse(ghContext: Context): Promise<RuntimeContext> {
+    return core.group('[CI::Process] Runtime context',
+      async () => {
+        core.debug(`The GitHub context: ${prettier(ghContext, 'nope')}`);
+        const runtime = await normalizeCommitMsg(this.gitParser.parse(ghContext));
+        core.info(JSON.stringify(runtime, Object.keys(runtime).sort(), 2));
+        return runtime;
+      });
+  }
+
   private removeBranchIfNeed = async (context: ProjectContext, dryRun: boolean): Promise<ProjectContext> => {
     if (context.isPR && context.isMerged && !dryRun) {
-      await GitOps.removeRemoteBranch(context.branch);
+      await core.group(`[CI::Process] Removing branch ${context.branch}...`,
+        () => GitOps.removeRemoteBranch(context.branch));
     }
     return context;
   };
 
-  private async buildContext(ctx: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
-    return core.group(`[CI::Process] Evaluating context on ${ctx.branch}...`,
-      () => ctx.isReleaseBranch || ctx.isReleasePR || ctx.isTag
-        ? this.buildContextWhenRelease(ctx, dryRun)
-        : this.buildContextOnAnotherBranch(ctx, dryRun));
+  private async buildContext(context: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
+    return core.group(`[CI::Process] Evaluating context on ${context.branch}...`,
+      () => context.isReleaseBranch || context.isReleasePR || context.isTag
+        ? this.buildContextWhenRelease(context, dryRun)
+        : this.buildContextOnAnotherBranch(context, dryRun));
   }
 
   private async buildContextOnAnotherBranch(ctx: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
@@ -67,7 +78,7 @@ export class ProjectOps {
     return {
       ...ctx, version: result.versions.current, versions: result.versions,
       ci: { ...pushStatus, needUpgrade: result.needUpgrade },
-      decision: ProjectOps.makeDecision(ctx, pushStatus.isPushed),
+      decision: makeDecision(ctx, pushStatus.isPushed),
     };
   }
 
@@ -87,7 +98,7 @@ export class ProjectOps {
       return {
         ...ctx, version, versions: result.versions,
         ci: { ...pushStatus, mustFixVersion: result.mustFixVersion, needTag: result.needTag },
-        decision: ProjectOps.makeDecision(ctx, pushStatus.isPushed),
+        decision: makeDecision(ctx, pushStatus.isPushed),
       };
     }
     const fixedStatus = result.mustFixVersion ? await this.gitOps.commitVersionCorrection(ctx.branch, version) : {};
@@ -98,7 +109,7 @@ export class ProjectOps {
     return {
       ...ctx, version, versions: result.versions,
       ci: { ...pushStatus, mustFixVersion: result.mustFixVersion, needPullRequest: isOpenedPR, changelog },
-      decision: ProjectOps.makeDecision(ctx, pushStatus.isPushed),
+      decision: makeDecision(ctx, pushStatus.isPushed),
     };
   }
 
@@ -106,28 +117,30 @@ export class ProjectOps {
     if (!needPR) {
       return needPR;
     }
-    const parameters = { base, head };
-    const isAvailable = await isPullRequestAvailable(parameters);
-    if (!isAvailable && !dryRun) {
-      const token = this.projectConfig.token;
-      if (isEmpty(token)) {
-        core.warning(`GitHub token is required to able to create Pull Request`);
+    return core.group(`[GitHub] Opening a Pull Request from ${head} into ${base}...`, async () => {
+      const parameters = { base, head };
+      const isAvailable = await isPullRequestAvailable(parameters);
+      if (isAvailable || dryRun) {
+        core.info(`[GitHub] Pull request is available or in dry-run mode. Skip to create Pull request.`);
       } else {
-        await core.group(`[GitHub] Open a Pull Request from ${head} into ${base}`,
-          async () => openPullRequest({ ...parameters, token }, `Release ${tag}`));
+        const token = this.projectConfig.token;
+        if (isEmpty(token)) {
+          core.warning(`[GitHub] GitHub token is required to able to create new Pull Request.`);
+        } else {
+          const url = await openPullRequest({ ...parameters, token }, `Release ${tag}`);
+          core.info(`[GitHub] New Pull request: ${url}`);
+        }
       }
-    }
-    return !isAvailable;
+      return !isAvailable;
+    });
   }
 
   private async generateChangelog(branch: string, version: string, dryRun: boolean): Promise<ChangelogResult> {
-    return core.group(`[CHANGELOG] Generating CHANGELOG ${version}...`, async () => {
-      const tagPrefix = this.projectConfig.gitParserConfig.tagPrefix;
-      const latestTag = await GitOps.getLatestTag(tagPrefix);
-      const result = await this.changelogOps.generate(latestTag, tagPrefix + version, dryRun);
-      const status = result.generated ? await this.gitOps.commit(branch, result.commitMsg!) : { isCommitted: false };
-      return { ...result, ...status };
-    });
+    const tagPrefix = this.projectConfig.gitParserConfig.tagPrefix;
+    const latestTag = await GitOps.getLatestTag(tagPrefix);
+    const result = await this.changelogOps.generate(latestTag, tagPrefix + version, dryRun);
+    const status = result.generated ? await this.gitOps.commit(branch, result.commitMsg!) : { isCommitted: false };
+    return { ...result, ...status };
   }
 }
 

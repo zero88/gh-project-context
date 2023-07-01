@@ -1,55 +1,10 @@
 {
-    "payload": {
-    "after": "ceba909e616c57a0593961813ad6d43f3196ce54",
-    "base_ref": "refs/heads/main",
-    "before": "fa356b93d3c7ab0fae29b0a6a9944388e4b71bda",
-    "commits": [
-      {
-        "author": {
-          "email": "support@github.com",
-          "name": "octocat",
-          "username": "octocat"
-        },
-        "committer": {
-          "email": "support@github.com",
-          "name": "octocat",
-          "username": "octocat"
-        },
-        "distinct": false,
-        "id": "ceba909e616c57a0593961813ad6d43f3196ce54",
-        "message": "update test workflow",
-        "timestamp": "2023-06-14T01:14:09+07:00",
-        "tree_id": "562d324bb29cf8f583999bf03cd2df0e7d60ede7",
-        "url": "https://github.com/octocat/Hello-World/commit/ceba909e616c57a0593961813ad6d43f3196ce54"
-      }
-    ],
-    "compare": "https://github.com/octocat/Hello-World/compare/fa356b93d3c7...ceba909e616c",
-    "created": false,
-    "deleted": false,
-    "forced": false,
-    "head_commit": {
-      "author": {
-        "email": "support@github.com",
-        "name": "octocat",
-        "username": "octocat"
-      },
-      "committer": {
-        "email": "support@github.com",
-        "name": "octocat",
-        "username": "octocat"
-      },
-      "distinct": false,
-      "id": "ceba909e616c57a0593961813ad6d43f3196ce54",
-      "message": "update test workflow",
-      "timestamp": "2023-06-14T01:14:09+07:00",
-      "tree_id": "562d324bb29cf8f583999bf03cd2df0e7d60ede7",
-      "url": "https://github.com/octocat/Hello-World/commit/ceba909e616c57a0593961813ad6d43f3196ce54"
-    },
-    "pusher": {
-      "email": "10863525+octocat@users.noreply.github.com",
-      "name": "octocat"
-    },
-    "ref": "refs/heads/release/1.0.11",
+  "payload": {
+    "description": null,
+    "master_branch": "main",
+    "pusher_type": "user",
+    "ref": "release/1.0.12",
+    "ref_type": "branch",
     "repository": {
       "allow_forking": true,
       "archive_url": "https://api.github.com/repos/octocat/Hello-World/{archive_format}{/ref}",
@@ -64,7 +19,7 @@
       "compare_url": "https://api.github.com/repos/octocat/Hello-World/compare/{base}...{head}",
       "contents_url": "https://api.github.com/repos/octocat/Hello-World/contents/{+path}",
       "contributors_url": "https://api.github.com/repos/octocat/Hello-World/contributors",
-      "created_at": 1608375722,
+      "created_at": "2020-12-19T11:02:02Z",
       "default_branch": "main",
       "deployments_url": "https://api.github.com/repos/octocat/Hello-World/deployments",
       "description": null,
@@ -99,7 +54,6 @@
       "language": "Dockerfile",
       "languages_url": "https://api.github.com/repos/octocat/Hello-World/languages",
       "license": null,
-      "master_branch": "main",
       "merges_url": "https://api.github.com/repos/octocat/Hello-World/merges",
       "milestones_url": "https://api.github.com/repos/octocat/Hello-World/milestones{/number}",
       "mirror_url": null,
@@ -110,7 +64,6 @@
       "open_issues_count": 0,
       "owner": {
         "avatar_url": "https://avatars.githubusercontent.com/u/10863525?v=4",
-        "email": "10863525+octocat@users.noreply.github.com",
         "events_url": "https://api.github.com/users/octocat/events{/privacy}",
         "followers_url": "https://api.github.com/users/octocat/followers",
         "following_url": "https://api.github.com/users/octocat/following{/other_user}",
@@ -119,7 +72,6 @@
         "html_url": "https://github.com/octocat",
         "id": 10863525,
         "login": "octocat",
-        "name": "octocat",
         "node_id": "MDQ6VXNlcjEwODYzNTI1",
         "organizations_url": "https://api.github.com/users/octocat/orgs",
         "received_events_url": "https://api.github.com/users/octocat/received_events",
@@ -132,11 +84,10 @@
       },
       "private": false,
       "pulls_url": "https://api.github.com/repos/octocat/Hello-World/pulls{/number}",
-      "pushed_at": 1686680098,
+      "pushed_at": "2023-06-28T04:14:31Z",
       "releases_url": "https://api.github.com/repos/octocat/Hello-World/releases{/id}",
-      "size": 93,
+      "size": 103,
       "ssh_url": "git@github.com:octocat/Hello-World.git",
-      "stargazers": 0,
       "stargazers_count": 0,
       "stargazers_url": "https://api.github.com/repos/octocat/Hello-World/stargazers",
       "statuses_url": "https://api.github.com/repos/octocat/Hello-World/statuses/{sha}",
@@ -148,7 +99,7 @@
       "topics": [],
       "trees_url": "https://api.github.com/repos/octocat/Hello-World/git/trees{/sha}",
       "updated_at": "2022-01-08T08:47:36Z",
-      "url": "https://github.com/octocat/Hello-World",
+      "url": "https://api.github.com/repos/octocat/Hello-World",
       "visibility": "public",
       "watchers": 0,
       "watchers_count": 0,
@@ -175,15 +126,15 @@
       "url": "https://api.github.com/users/octocat"
     }
   },
-  "eventName": "push",
-  "sha": "ceba909e616c57a0593961813ad6d43f3196ce54",
-  "ref": "refs/heads/release/1.0.11",
+  "eventName": "create",
+  "sha": "bcc2dd741f4ed103317d53454f7271c5a555b446",
+  "ref": "refs/heads/release/1.0.12",
   "workflow": "GH-context",
   "action": "foo",
   "actor": "octocat",
   "job": "context",
-  "runNumber": 115,
-  "runId": 5259002654,
+  "runNumber": 124,
+  "runId": 5397171768,
   "apiUrl": "https://api.github.com",
   "serverUrl": "https://github.com",
   "graphqlUrl": "https://api.github.com/graphql"
