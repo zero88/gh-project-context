@@ -10,19 +10,20 @@ import { ReleaseVersionOps } from './releaseVersionOps';
 import { RuntimeContext } from './runtimeContext';
 import { isEmpty, prettier } from './utils';
 
-const makeDecision = (context: RuntimeContext, isPushed: boolean): Decision => {
-  const build = !isPushed && !context.isClosed && !context.isMerged && !context.isAfterMergedReleasePR &&
-                !context.isReleaseBranch;
-  const publish = build && (context.onDefaultBranch || context.isTag);
-  return { build, publish };
-};
-
 const normalizeCommitMsg = async (context: RuntimeContext): Promise<RuntimeContext> => {
   if (!isEmpty(context.commitMsg)) {
     return context;
   }
   const commitMsg = await GitOps.getCommitMsg(context.commitId);
   return ({ ...context, commitMsg });
+};
+
+export const makeDecision = (context: RuntimeContext, ciPushed: boolean): Decision => {
+  const notBuild = ciPushed || context.isClosed || context.isMerged ||
+                   (context.isBranch && (context.isRelease || context.isOpened)) || context.isAfterMergedReleasePR;
+  const build = !notBuild;
+  const publish = build && (context.onDefaultBranch || (context.isRelease && context.isTag));
+  return { build, publish };
 };
 
 export class ProjectOps {
@@ -67,14 +68,14 @@ export class ProjectOps {
 
   private async buildContext(context: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
     return core.group(`[CI::Process] Evaluating context on ${context.branch}...`,
-      () => context.isReleaseBranch || context.isReleasePR || context.isTag
+      () => context.isRelease
         ? this.buildContextWhenRelease(context, dryRun)
         : this.buildContextOnAnotherBranch(context, dryRun));
   }
 
   private async buildContextOnAnotherBranch(ctx: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
     const result = await this.versionOps.upgrade(ctx, ctx.isAfterMergedReleasePR, dryRun);
-    const pushStatus = await this.commitPushNext(ctx.branch, result.needUpgrade, result.nextVersion, dryRun);
+    const pushStatus = await this.commitPushNext(ctx.branch, result.needUpgrade, result.versions.bumpedVersion, dryRun);
     return {
       ...ctx, version: result.versions.current, versions: result.versions,
       ci: { ...pushStatus, needUpgrade: result.needUpgrade },

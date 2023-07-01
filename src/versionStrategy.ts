@@ -2,8 +2,6 @@ import { lstatSync } from 'fs';
 import * as glob from 'glob';
 import * as path from 'path';
 import { inc, valid } from 'semver';
-import { Versions } from './projectContext';
-import { RuntimeVersions } from './runtimeContext';
 import { convertToNumber, isEmpty } from './utils';
 
 export type NextVersionMode = 'MAJOR' | 'MINOR' | 'PATCH' | 'NONE';
@@ -55,6 +53,25 @@ export interface VersionResult {
   readonly isChanged: boolean;
   readonly files: string[];
   readonly version: string;
+}
+
+export interface NextVersion {
+  /**
+   * Suggest next major version if after release
+   */
+  readonly nextMajor?: string;
+  /**
+   * Suggest next minor version if after release
+   */
+  readonly nextMinor?: string;
+  /**
+   * Suggest next path version if after release
+   */
+  readonly nextPath?: string;
+  /**
+   * Bumped version
+   */
+  readonly bumpedVersion?: string;
 }
 
 export const mergeVersionResult = (prev: VersionResult, next: VersionResult): VersionResult => ({
@@ -113,19 +130,19 @@ export const createVersionStrategy = (filePatterns?: string, nextMode?: string |
   versionPatterns: parseVersionsPatterns(filePatterns),
 });
 
-export const createVersions = (runtime: RuntimeVersions, current: string, isGenNext: boolean = false): Versions => {
-  if (isGenNext && valid(current)) {
-    return {
-      ...runtime, current,
-      nextMajor: inc(current, 'major')!,
-      nextMinor: inc(current, 'minor')!,
-      nextPath: inc(current, 'patch')!,
-    };
+export const createNextVersion = (current: string, nextMode: NextVersionMode): NextVersion => {
+  if (!valid(current)) {
+    return {};
   }
-  return { ...runtime, current };
+  const nextVersion = {
+    nextMajor: inc(current, 'major')!,
+    nextMinor: inc(current, 'minor')!,
+    nextPath: inc(current, 'patch')!,
+  };
+  return { ...nextVersion, bumpedVersion: getBumpedVersion(nextVersion, nextMode) };
 };
 
-export const getNextVersion = (versions: Versions, nextMode: NextVersionMode) => {
+export const getBumpedVersion = (versions: NextVersion, nextMode: NextVersionMode) => {
   if (nextMode === 'MAJOR') {
     return versions.nextMajor!;
   }

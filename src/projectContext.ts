@@ -1,5 +1,7 @@
 import { ChangelogResult } from './changelog';
 import { CommitPushStatus } from './gitOps';
+import { RuntimeContext, RuntimeVersion } from './runtimeContext';
+import { NextVersion } from './versionStrategy';
 
 export interface Decision {
   /**
@@ -55,98 +57,23 @@ export type CIContextOnEvent = CIContextOnReleaseBranch | CIContextOnMergeReleas
 
 export type CIContext = CommitPushStatus & CIContextOnEvent
 
-export interface Versions {
-  /**
-   * Current branch version from tag/release version
-   */
-  readonly branch: string;
+export interface Versions extends RuntimeVersion, NextVersion {
   /**
    * Current version in configuration file or tag/release version
    */
   readonly current: string;
-  /**
-   * Suggest next major version if after release
-   */
-  readonly nextMajor?: string;
-  /**
-   * Suggest next minor version if after release
-   */
-  readonly nextMinor?: string;
-  /**
-   * Suggest next path version if after release
-   */
-  readonly nextPath?: string;
 }
 
-export interface ProjectContext {
-  /**
-   * Current branch name or tag name
-   */
-  readonly branch: string;
-  /**
-   * Check whether current event is on default branch or not
-   * @type {boolean}
-   */
-  readonly onDefaultBranch: boolean;
-  /**
-   * Check whether current event is on pull request or not
-   * @type {boolean}
-   */
-  readonly isPR: boolean;
-  /**
-   * Check whether current event is on release branch or not
-   * @type {boolean}
-   */
-  readonly isReleaseBranch: boolean;
-  /**
-   * Check whether current event is on release pull request or not
-   * @type {boolean}
-   */
-  readonly isReleasePR: boolean;
-  /**
-   * Check whether current event is a merged commit after merged release pull request into default branch or not
-   * @type {boolean}
-   */
-  readonly isAfterMergedReleasePR: boolean;
-  /**
-   * Check whether current event is merged PR
-   * @type {boolean}
-   */
-  readonly isMerged: boolean;
-  /**
-   * Check whether current event is close PR but not merged into target branch
-   * @type {boolean}
-   */
-  readonly isClosed: boolean;
-  /**
-   * Check whether current event is on ref tag
-   * @type {boolean}
-   */
-  readonly isTag: boolean;
-  /**
-   * Check whether manual or schedule event
-   */
-  readonly isManualOrSchedule: boolean;
+export interface ProjectContext extends RuntimeContext {
   /**
    * Current version
    * @type {string}
    */
   readonly version: string;
   /**
-   * Latest commit message
-   * @type {string}
+   * Version output
    */
-  readonly commitMsg: string;
-  /**
-   * Latest commit id
-   * @type {string}
-   */
-  readonly commitId: string;
-  /**
-   * Latest short commit id
-   * @type {string}
-   */
-  readonly shortCommitId: string;
+  readonly versions: Versions;
   /**
    * CI context
    */
@@ -155,8 +82,4 @@ export interface ProjectContext {
    * Decision output
    */
   readonly decision: Decision;
-  /**
-   * Version output
-   */
-  readonly versions: Versions;
 }

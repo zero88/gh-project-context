@@ -14,54 +14,54 @@ import * as onOpenReleasePRContext from './resources/github/@action.gh.release.p
 import * as onTagContext from './resources/github/@action.gh.tag.json';
 
 const expectedCreateOnReleaseBranch: FixedResult = {
-  'mustFixVersion': true,
-  'needPullRequest': true,
-  'needTag': false,
-  'versions': {
-    'branch': '1.0.12',
-    'current': '1.0.12',
+  mustFixVersion: true,
+  needPullRequest: true,
+  needTag: false,
+  versions: {
+    branch: '1.0.12',
+    current: '1.0.12',
   },
-}
+};
 
 const expectedPushOnReleaseBranch: FixedResult = {
-  'mustFixVersion': true,
-  'needPullRequest': true,
-  'needTag': false,
-  'versions': {
-    'branch': '1.0.11',
-    'current': '1.0.11',
+  mustFixVersion: true,
+  needPullRequest: true,
+  needTag: false,
+  versions: {
+    branch: '1.0.11',
+    current: '1.0.11',
   },
 };
 
 const expectedOnClosedReleasePR = {
-  'mustFixVersion': true,
-  'needPullRequest': false,
-  'needTag': false,
-  'versions': {
-    'branch': '1.0.0',
-    'current': '1.0.0',
+  mustFixVersion: true,
+  needPullRequest: false,
+  needTag: false,
+  versions: {
+    branch: '1.0.0',
+    current: '1.0.0',
   },
 };
 const expectedOpenReleasePR = {
-  'mustFixVersion': true,
-  'needPullRequest': false,
-  'needTag': false,
-  'versions': {
-    'branch': '1.0.6',
-    'current': '1.0.6',
+  mustFixVersion: true,
+  needPullRequest: false,
+  needTag: false,
+  versions: {
+    branch: '1.0.6',
+    current: '1.0.6',
   },
 };
 const expectedOnMergedReleasePR = {};
 const expectedOnTag = {};
 const expectedOnPushAfterMergeReleasePR: UpgradeResult = {
-  'needUpgrade': true,
-  'nextVersion': '1.3.0',
-  'versions': {
-    'branch': 'main',
-    'current': '1.2.3',
-    'nextMajor': '2.0.0',
-    'nextMinor': '1.3.0',
-    'nextPath': '1.2.4',
+  needUpgrade: true,
+  versions: {
+    branch: 'main',
+    current: '1.2.3',
+    nextMajor: '2.0.0',
+    nextMinor: '1.3.0',
+    nextPath: '1.2.4',
+    bumpedVersion: '1.3.0',
   },
 };
 
