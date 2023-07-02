@@ -47,6 +47,13 @@ export interface RuntimeContext {
    */
   readonly isRelease: boolean;
   /**
+   * Check whether current event is hotfix event on regardless of branch, pull-request or tag.
+   *
+   * The hotfix event is identified by hotfix branch prefix.
+   * @type {boolean}
+   */
+  readonly isHotfix: boolean;
+  /**
    * Check whether current event is a merged commit after merged release pull request into default branch or not
    * @type {boolean}
    */
@@ -81,6 +88,11 @@ export interface RuntimeContext {
    * @type {string}
    */
   readonly commitShortId: string;
+  /**
+   * Base branch in pull request
+   * @type {string}
+   */
+  readonly basePrBranch?: string;
 
   readonly versions: RuntimeVersion,
 }

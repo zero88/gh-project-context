@@ -31,13 +31,13 @@ test('open pull requests', async () => {
   const url = await openPullRequest({
     ...parameters,
     token: '0000000000000000000000000000000000000001',
-  }, 'Release v1.0.11');
+  }, { title: 'Release v1.0.11', body: 'Hello release' });
   const mockedRequest = await pendingRequest;
   expect(mockedRequest.method).toEqual('POST');
   expect(mockedRequest.url.pathname).toEqual('/repos/octocat/Hello-World/pulls');
   expect(mockedRequest.headers.get('authorization')).toEqual('token 0000000000000000000000000000000000000001');
   expect(await mockedRequest.json()).toEqual({
-    head: 'octocat:release/1.0.11', base: 'main', title: 'Release v1.0.11',
+    head: 'octocat:release/1.0.11', base: 'main', title: 'Release v1.0.11', body: 'Hello release',
   });
   expect(url).toEqual(`https://github.com/octocat/Hello-World/pull/1347`);
 });

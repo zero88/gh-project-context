@@ -1,6 +1,6 @@
 import { Context } from '@actions/github/lib/context';
 import { RuntimeContext, RuntimeVersion } from './runtimeContext';
-import { isEmpty, isNumeric, removeEmptyProperties } from './utils';
+import { isEmpty, isNotEmpty, isNumeric, removeEmptyProperties } from './utils';
 
 export type GitParserConfig = {
   /**
@@ -13,6 +13,11 @@ export type GitParserConfig = {
    * @type {string}
    */
   readonly tagPrefix: string;
+  /**
+   * Git Hotfix Prefix
+   * @type {string}
+   */
+  readonly hotfixPrefix: string;
   /**
    * Git Release Branch Prefix
    * @type {string}
@@ -32,17 +37,18 @@ export type GitParserConfig = {
 
 const defaultConfig: GitParserConfig = {
   defaultBranch: 'main',
-  mergedReleaseMsgRegex: new RegExp('^Merge pull request #[0-9]+ from .+/release/.+$', 'gim'),
+  mergedReleaseMsgRegex: new RegExp('^Merge pull request #[0-9]+ from .+\/release\/.+$', 'gim'),
   releaseBranchPrefix: 'release/',
+  hotfixPrefix: 'hotfix/',
   shaLength: 7,
   tagPrefix: 'v',
 };
 
-export const createGitParserConfig = (defaultBranch?: string, tagPrefix?: string, releaseBranchPrefix?: string,
-  mergedReleaseMsg?: string, shaLength?: number): GitParserConfig => {
+export const createGitParserConfig = (defaultBranch?: string, tagPrefix?: string, hotfixPrefix?: string,
+  releaseBranchPrefix?: string, mergedReleaseMsg?: string, shaLength?: number): GitParserConfig => {
   return {
-    ...defaultConfig, ...removeEmptyProperties({
-      defaultBranch, tagPrefix, releaseBranchPrefix,
+    ...defaultConfig, ...removeEmptyProperties(<GitParserConfig>{
+      defaultBranch, tagPrefix, releaseBranchPrefix, hotfixPrefix,
       mergedReleaseMsgRegex: isEmpty(mergedReleaseMsg) ? null : new RegExp(mergedReleaseMsg!, 'gim'),
       shaLength: isNumeric(shaLength) ? +shaLength! : null,
     }),
@@ -64,6 +70,8 @@ const getBranchName = (context: Context, isPR: boolean, isTag: boolean): string 
   ? context.payload.pull_request?.head?.ref
   : context.ref.replace(isTag ? 'refs/tags/' : 'refs/heads/', '');
 
+const getBasePrBranch = (ctx: Context, isPR: boolean): string => isPR ? ctx.payload.pull_request?.base?.ref : undefined;
+
 const checkDefBranch = (context: Context, defBranch: string): boolean => context.ref === `refs/heads/${defBranch}`;
 
 const checkMerged = (context: Context, isPR: boolean) => isPR && context.payload.action === 'closed' &&
@@ -75,24 +83,7 @@ const checkClosed = (context: Context, isPR: boolean) => isPR && context.payload
 const checkOpen = (context: Context, isPR: boolean) => isPR && context.payload.action === 'opened' ||
                                                        context.eventName === 'create';
 
-const isReleaseEvent = (event: string) => ['create', 'push', 'pull_request'].includes(event);
-
-// @formatter:off
-const checkAfterMergedReleasePR = (event: string, isOnDefault: boolean, commitMsg: string, mergedReleaseRegex: RegExp): boolean =>
-  event === 'push' && isOnDefault && mergedReleaseRegex.test(commitMsg?.trim());
-// @formatter:on
-
-// @formatter:off
-const parseVersion = (branch: string, isTag: boolean, isRelease: boolean, releasePrefix: string, tagPrefix: string): RuntimeVersion => {
-// @formatter:on
-  if (!isRelease) {
-    return { branch };
-  }
-  if (isTag) {
-    return { branch: branch.replace(new RegExp(`^${tagPrefix}`), '') };
-  }
-  return { branch: branch.replace(new RegExp(`^${releasePrefix}`), '') };
-};
+const supportTriggerEvent = (event: string) => ['create', 'push', 'pull_request'].includes(event);
 
 const getCommitId = (context: Context, isPR: boolean, isNotMerged: boolean): string => isPR && isNotMerged
   ? (context.payload.pull_request?.head?.sha ?? context.sha) : context.sha;
@@ -107,8 +98,20 @@ export class GitParser {
     this.config = gitParserConfig;
   }
 
+  private parseVersion(branch: string, isTag: boolean, isHotfix: boolean, isRelease: boolean) {
+    let branchPrefix: string = '';
+    if (isRelease) branchPrefix = this.config.releaseBranchPrefix;
+    if (isRelease && isHotfix) branchPrefix += this.config.hotfixPrefix;
+    if (isTag) branchPrefix = this.config.tagPrefix;
+    const branchName = isEmpty(branchPrefix) ? branch : branch.replace(new RegExp(`^${branchPrefix}`), '');
+    return <RuntimeVersion>{ branch: branchName };
+  }
+
+  private checkAfterMergedReleasePR(event: string, isOnDefault: boolean, isHotfix: boolean, commitMsg: string) {
+    return event === 'push' && (isOnDefault || isHotfix) && isNotEmpty(commitMsg?.trim().match(this.config.mergedReleaseMsgRegex));
+  }
+
   parse(ghContext: Context): RuntimeContext {
-    const { shaLength, releaseBranchPrefix, defaultBranch: defBranch, tagPrefix, mergedReleaseMsgRegex } = this.config;
     const event = ghContext.eventName;
     const commitMsg = ghContext.payload?.head_commit?.message;
     const isPR = checkPR(event);
@@ -116,22 +119,25 @@ export class GitParser {
     const isBranch = !isPR && !isTag;
     const isSchedule = checkSchedule(event);
     const isDispatch = checkDispatchEvent(event);
-    const defaultBranch = getDefBranch(ghContext, defBranch);
+    const defaultBranch = getDefBranch(ghContext, this.config.defaultBranch);
     const branch = getBranchName(ghContext, isPR, isTag);
     const onDefaultBranch = checkDefBranch(ghContext, defaultBranch);
-    const isRelease = isReleaseEvent(event) &&
-                      (isTag ? branch.startsWith(tagPrefix) : branch.startsWith(releaseBranchPrefix));
     const isMerged = checkMerged(ghContext, isPR);
     const isClosed = checkClosed(ghContext, isPR);
     const isOpened = checkOpen(ghContext, isPR);
-    const isAfterMergedReleasePR = checkAfterMergedReleasePR(event, onDefaultBranch, commitMsg, mergedReleaseMsgRegex);
+    const isRelease = supportTriggerEvent(event) &&
+                      branch.startsWith(isTag ? this.config.tagPrefix : this.config.releaseBranchPrefix);
+    const isHotfix = supportTriggerEvent(event) &&
+                     branch.startsWith((isRelease ? this.config.releaseBranchPrefix : '') + this.config.hotfixPrefix);
+    const versions = this.parseVersion(branch, isTag, isHotfix, isRelease);
+    const isAfterMergedReleasePR = this.checkAfterMergedReleasePR(event, onDefaultBranch, isHotfix, commitMsg);
     const commitId = getCommitId(ghContext, isPR, !isMerged);
-    const commitShortId = getShortCommitId(commitId, shaLength);
-    const versions = parseVersion(branch, isTag, isRelease, releaseBranchPrefix, tagPrefix);
+    const commitShortId = getShortCommitId(commitId, this.config.shaLength);
+    const basePrBranch = getBasePrBranch(ghContext, isPR);
     return {
-      branch, defaultBranch, onDefaultBranch,
+      branch, defaultBranch, onDefaultBranch, basePrBranch,
       isSchedule, isDispatch, isBranch, isPR, isTag,
-      isRelease, isAfterMergedReleasePR, isMerged, isClosed, isOpened,
+      isHotfix, isRelease, isAfterMergedReleasePR, isMerged, isClosed, isOpened,
       commitMsg, commitId, commitShortId, versions,
     };
   }

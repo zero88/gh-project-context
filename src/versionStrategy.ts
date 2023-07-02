@@ -1,7 +1,7 @@
 import { lstatSync } from 'fs';
 import * as glob from 'glob';
 import * as path from 'path';
-import { inc, valid } from 'semver';
+import { inc, parse, valid } from 'semver';
 import { convertToNumber, isEmpty } from './utils';
 
 export type NextVersionMode = 'MAJOR' | 'MINOR' | 'PATCH' | 'NONE';
@@ -125,6 +125,13 @@ const parseVersionsPatterns = (patterns?: string): VersionPattern[] =>
     .map(arr => parseVersionPattern(arr))
     .filter(ctx => ctx);
 
+const getBumpedVersion = (versions: NextVersion, nextMode: NextVersionMode) => {
+  if (nextMode === 'MAJOR') return versions.nextMajor!;
+  if (nextMode === 'MINOR') return versions.nextMinor!;
+  if (nextMode === 'PATCH') return versions.nextPath!;
+  return undefined;
+};
+
 export const createVersionStrategy = (filePatterns?: string, nextMode?: string | NextVersionMode): VersionStrategy => ({
   nextVersionMode: ['MAJOR', 'MINOR', 'PATCH', 'NONE'].includes(nextMode ?? '') ? <NextVersionMode>nextMode : 'NONE',
   versionPatterns: parseVersionsPatterns(filePatterns),
@@ -142,15 +149,11 @@ export const createNextVersion = (current: string, nextMode: NextVersionMode): N
   return { ...nextVersion, bumpedVersion: getBumpedVersion(nextVersion, nextMode) };
 };
 
-export const getBumpedVersion = (versions: NextVersion, nextMode: NextVersionMode) => {
-  if (nextMode === 'MAJOR') {
-    return versions.nextMajor!;
-  }
-  if (nextMode === 'MINOR') {
-    return versions.nextMinor!;
-  }
-  if (nextMode === 'PATCH') {
-    return versions.nextPath!;
-  }
-  return undefined;
+export const findPreviousVersion = (current: string, versions: string[]): string => {
+  if (isEmpty(versions)) throw `Required a list of versions`;
+  const semVer = parse(current);
+  if (!semVer) throw `Invalid version ${current}`;
+  const prev = versions.find(v => semVer.compare(v) > 0 || (semVer.compare(v) === 0 && semVer.compareBuild(v) > 0));
+  if (!prev) throw `Not found previous version`;
+  return prev;
 };

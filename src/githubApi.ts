@@ -16,6 +16,11 @@ interface PullRequestParameter {
   token?: string
 }
 
+interface PullRequestContent {
+  title: string,
+  body?: string,
+}
+
 const createHeaders = (token?: string): {} => {
   let headers = DEFAULT_HEADERS;
   if (isNotEmpty(token)) {
@@ -52,7 +57,7 @@ const isPullRequestAvailable = async (parameters: PullRequestParameter): Promise
     return isNotEmpty(pr);
   });
 
-const openPullRequest = async (parameters: PullRequestParameter, title: string): Promise<string> => {
+const openPullRequest = async (parameters: PullRequestParameter, content: PullRequestContent): Promise<string> => {
   const owner = parameters.owner ?? RUNNER_ENV.owner;
   const options = {
     ...createHeaders(parameters.token),
@@ -61,7 +66,7 @@ const openPullRequest = async (parameters: PullRequestParameter, title: string):
     repo: parameters.repo ?? RUNNER_ENV.repo,
     head: `${owner}:${parameters.head}`,
     base: parameters.base,
-    title,
+    ...content,
   };
   return request('POST /repos/{owner}/{repo}/pulls', options)
     .then(resp => {
@@ -74,4 +79,4 @@ const openPullRequest = async (parameters: PullRequestParameter, title: string):
     });
 };
 
-export { PullRequestParameter, getPullRequests, isPullRequestAvailable, openPullRequest };
+export { PullRequestParameter, PullRequestContent, getPullRequests, isPullRequestAvailable, openPullRequest };

@@ -124,10 +124,10 @@ export class GitOps {
 
   static removeRemoteBranch = async (branch: string) => GitOps.lenientExec(['push', 'origin', `:${branch}`]);
 
-  static getLatestTag = async (pattern?: string) =>
+  static getTags = async (pattern?: string) =>
     GitOps.lenientExec(['fetch', '--tag'])
-      .then(() => GitOps.lenientExec(['tag', '-l', '--sort=-creatordate', `${pattern}*`]))
-      .then(out => out.split('\n')[0]);
+      .then(() => GitOps.lenientExec(['tag', '-l', '--sort=-version:refname', `${pattern}*`]))
+      .then(out => out.split('\n'));
 
   async commit(branch: string, msg: string): Promise<CommitStatus> {
     return this.doCommit(msg, branch);
