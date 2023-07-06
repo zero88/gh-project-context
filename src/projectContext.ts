@@ -27,7 +27,7 @@ export interface CIContextOnRelease {
 
 export interface CIContextOnReleaseBranch extends CIContextOnRelease {
   /**
-   * Need to create new pull request
+   * Need to open new pull request for release or merge hotfix into default branch
    */
   readonly needPullRequest: boolean;
 
@@ -47,7 +47,7 @@ export interface CIContextOnMergeReleasePR extends CIContextOnRelease {
 
 export interface CIContextOnNext {
   /**
-   * Need to upgrade next version after release branch is merged
+   * Need to upgrade next version after release branch is merged into default branch
    */
   readonly needUpgrade: boolean;
 

@@ -44,19 +44,16 @@ export interface GeneratedResult {
 
 export type ChangelogResult = GeneratedResult & CommitStatus
 
-const getTag = (tag?: string) => isEmpty(tag) ? '1.16.2' : tag;
-const getImage = (tag?: string) => `githubchangeloggenerator/github-changelog-generator:${getTag(tag)}`;
-
 const defaultConfig: ChangelogConfig = {
   active: false,
-  image: getImage(),
+  image: `githubchangeloggenerator/github-changelog-generator:1.16.2`,
   configFile: '.github_changelog_generator',
   commitMsg: 'Generated CHANGELOG',
 };
 
-export const createChangelogConfig = (active?: boolean, imageTag?: string, configFile?: string, token?: string,
+export const createChangelogConfig = (active?: boolean, image?: string, configFile?: string, token?: string,
   commitMsg?: string): ChangelogConfig => ({
-  ...defaultConfig, ...removeEmptyProperties({ active, configFile, token, commitMsg, image: getImage(imageTag) }),
+  ...defaultConfig, ...removeEmptyProperties({ active, configFile, token, commitMsg, image }),
 });
 
 export class ChangelogOps {

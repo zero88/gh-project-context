@@ -71,7 +71,7 @@ export interface NextVersion {
   /**
    * Bumped version
    */
-  readonly bumpedVersion?: string;
+  readonly bumped?: string;
 }
 
 export const mergeVersionResult = (prev: VersionResult, next: VersionResult): VersionResult => ({
@@ -146,7 +146,7 @@ export const createNextVersion = (current: string, nextMode: NextVersionMode): N
     nextMinor: inc(current, 'minor')!,
     nextPath: inc(current, 'patch')!,
   };
-  return { ...nextVersion, bumpedVersion: getBumpedVersion(nextVersion, nextMode) };
+  return { ...nextVersion, bumped: getBumpedVersion(nextVersion, nextMode) };
 };
 
 export const findPreviousVersion = (current: string, versions: string[]): string => {

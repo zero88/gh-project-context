@@ -70,7 +70,7 @@ const getBranchName = (context: Context, isPR: boolean, isTag: boolean): string 
   ? context.payload.pull_request?.head?.ref
   : context.ref.replace(isTag ? 'refs/tags/' : 'refs/heads/', '');
 
-const getBasePrBranch = (ctx: Context, isPR: boolean): string => isPR ? ctx.payload.pull_request?.base?.ref : undefined;
+const getPrBaseBranch = (ctx: Context, isPR: boolean): string => isPR ? ctx.payload.pull_request?.base?.ref : undefined;
 
 const checkDefBranch = (context: Context, defBranch: string): boolean => context.ref === `refs/heads/${defBranch}`;
 
@@ -108,7 +108,8 @@ export class GitParser {
   }
 
   private checkAfterMergedReleasePR(event: string, isOnDefault: boolean, isHotfix: boolean, commitMsg: string) {
-    return event === 'push' && (isOnDefault || isHotfix) && isNotEmpty(commitMsg?.trim().match(this.config.mergedReleaseMsgRegex));
+    return event === 'push' && (isOnDefault || isHotfix) &&
+           isNotEmpty(commitMsg?.trim().match(this.config.mergedReleaseMsgRegex));
   }
 
   parse(ghContext: Context): RuntimeContext {
@@ -133,9 +134,9 @@ export class GitParser {
     const isAfterMergedReleasePR = this.checkAfterMergedReleasePR(event, onDefaultBranch, isHotfix, commitMsg);
     const commitId = getCommitId(ghContext, isPR, !isMerged);
     const commitShortId = getShortCommitId(commitId, this.config.shaLength);
-    const basePrBranch = getBasePrBranch(ghContext, isPR);
+    const prBaseBranch = getPrBaseBranch(ghContext, isPR);
     return {
-      branch, defaultBranch, onDefaultBranch, basePrBranch,
+      branch, defaultBranch, onDefaultBranch, prBaseBranch,
       isSchedule, isDispatch, isBranch, isPR, isTag,
       isHotfix, isRelease, isAfterMergedReleasePR, isMerged, isClosed, isOpened,
       commitMsg, commitId, commitShortId, versions,

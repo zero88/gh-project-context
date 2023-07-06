@@ -88,10 +88,10 @@ inputs:
     description: 'Enable generate CHANGELOG'
     required: false
     default: 'false'
-  changelogImageTag:
+  changelogImage:
     description: 'CHANGELOG docker image tag: https://github.com/github-changelog-generator/docker-github-changelog-generator'
     required: false
-    default: '1.16.2'
+    default: 'githubchangeloggenerator/github-changelog-generator:1.16.2'
   changelogConfigFile:
     description: 'CHANGELOG config file: https://github.com/github-changelog-generator/github-changelog-generator#params-file'
     required: false
@@ -108,48 +108,76 @@ outputs:
     description: 'Current branch name or tag name'
   onDefaultBranch:
     description: 'Check whether current event is on default branch or not'
+  isBranch:
+    description: 'Check whether current event is on branch or not'
   isPR:
     description: 'Check whether current event is on pull request or not'
-  isReleaseBranch:
-    description: 'Check whether current event is on release branch or not'
-  isReleasePR:
-    description: 'Check whether current event is on release pull request or not'
+  isTag:
+    description: 'Check whether current event is on ref tag'
+  isSchedule:
+    description: 'Check whether current event is by schedule or not'
+  isDispatch:
+    description: 'Check whether current event is by manual or dispatch from another workflow or event from repository'
+  isRelease:
+    description: 'Check whether current event is release event on regardless of branch, pull-request or tag'
+  isHotfix:
+    description: 'Check whether current event is hotfix event on regardless of branch, pull-request or tag'
+  isAfterMergedReleasePR:
+    description: 'Check whether current event is a merged commit after merged release pull request into default branch or not'
   isMerged:
     description: 'Check whether current event is merged PR'
   isClosed:
     description: 'Check whether current event is close PR but not merged into target branch'
-  isAfterMergedReleasePR:
-    description: 'Check whether current event is a merged commit after merged release pull request into default branch or not'
-  isTag:
-    description: 'Check whether current event is on ref tag'
+  isOpened:
+    description: 'Check whether current event is open PR or create branch'
+  prBaseBranch:
+    description: 'Base branch in pull request'
   commitMsg:
     description: 'The latest commit message'
   commitId:
     description: 'The latest commit id'
-  shortCommitId:
+  commitShortId:
     description: 'The latest short commit id'
   version:
     description: 'Current tag version or release version'
   ci_mustFixVersion:
     description: 'CI: Need to fix version to match with release name'
+  ci_needPullRequest:
+    description: 'CI: Need to open new pull request for release or merge hotfix into default branch'
   ci_needTag:
     description: 'CI: Need to tag new version if release branch is merged'
+  ci_needUpgrade:
+    description: 'CI: Need to upgrade next version after release branch is merged into default branch'
   ci_isPushed:
     description: 'CI: Check whether if auto commit is pushed to remote'
   ci_commitId:
     description: 'CI: auto commit id'
   ci_commitMsg:
     description: 'CI: auto commit message'
+  ci_changelog_generated:
+    description: 'CI: changelog is generated'
+  ci_changelog_releaseTag:
+    description: 'CI: changelog generated for release tag'
+  ci_changelog_sinceTag:
+    description: 'CI: changelog generated since tag'
+  ci_changelog_isCommitted:
+    description: 'CI: changelog is committed'
+  ci_changelog_commitId:
+    description: 'CI: changelog auto commit id'
+  ci_changelog_commitMsg:
+    description: 'CI: changelog auto commit message'
   decision_build:
     description: |
       Should run the next step: such as build & test
-      Default value is: `!ci.isPushed && !isClosed && !isMerged && !isAfterMergedReleasePR && !isReleaseBranch`
+      Default value is: `!(ciPushed || isClosed || isMerged || (isBranch && (isRelease || isOpened)) || isAfterMergedReleasePR)`
   decision_publish:
     description: |
       Should publish artifact: such as push artifact to any registry: npm, docker, maven, pypi..
-      Default value is: `decision.build && (onDefaultBranch || isTag)`
+      Default value is: `decision.build && (onDefaultBranch || (isRelease && isTag))`
   ver_current:
-    description: 'Current version in config file'
+    description: 'Current version in configuration file or tag/release version'
+  ver_bumped:
+    description: 'Bumped version'
   ver_nextMajor:
     description: 'Suggest next major version if after release and ver_current is compatible with semver'
   ver_nextMinor:
