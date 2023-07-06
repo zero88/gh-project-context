@@ -38,6 +38,7 @@ const loadConfig: () => { dryRun: boolean; ops: ProjectOps } = () => {
   const gitParserConfig = createGitParserConfig(
     getInputString('defaultBranch'),
     getInputString('tagPrefix'),
+    getInputString('hotfixPrefix'),
     getInputString('releaseBranchPrefix'),
     getInputString('mergedReleaseMsgRegex'),
     getInputNumber('shaLength'));

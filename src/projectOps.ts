@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
 import { Context } from '@actions/github/lib/context';
 import { ChangelogOps, ChangelogResult } from './changelog';
-import { isPullRequestAvailable, openPullRequest } from './githubApi';
+import { isPullRequestAvailable, openPullRequest, PullRequestContent } from './githubApi';
 import { CommitStatus, GitOps, mergeCommitStatus } from './gitOps';
 import { GitParser } from './gitParser';
 import { ProjectConfig } from './projectConfig';
@@ -9,6 +9,7 @@ import { Decision, ProjectContext } from './projectContext';
 import { ReleaseVersionOps } from './releaseVersionOps';
 import { RuntimeContext } from './runtimeContext';
 import { isEmpty, prettier } from './utils';
+import { findPreviousVersion } from './versionStrategy';
 
 const normalizeCommitMsg = async (context: RuntimeContext): Promise<RuntimeContext> => {
   if (!isEmpty(context.commitMsg)) {
@@ -74,7 +75,7 @@ export class ProjectOps {
   }
 
   private async buildContextOnAnotherBranch(ctx: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
-    const result = await this.versionOps.upgrade(ctx, ctx.isAfterMergedReleasePR, dryRun);
+    const result = await this.versionOps.upgrade(ctx, dryRun);
     const pushStatus = await this.commitPushNext(ctx.branch, result.needUpgrade, result.versions.bumpedVersion, dryRun);
     return {
       ...ctx, version: result.versions.current, versions: result.versions,
@@ -96,17 +97,28 @@ export class ProjectOps {
     const tag = `${this.projectConfig.gitParserConfig.tagPrefix}${version}`;
     if (result.needTag) {
       const pushStatus = await this.gitOps.tag(tag).then(s => this.gitOps.pushTag(tag, s, dryRun));
+      const isOpenedPR = ctx.isHotfix &&
+                         await this.createPullRequest(ctx.defaultBranch, ctx.basePrBranch!, {
+                           title: `Apply hotfix ${tag} patch`,
+                           body: `:warning: Action required: need to merge or rebase from ${ctx.defaultBranch} into ${ctx.basePrBranch} :warning:`,
+                         }, dryRun);
       return {
         ...ctx, version, versions: result.versions,
-        ci: { ...pushStatus, mustFixVersion: result.mustFixVersion, needTag: result.needTag },
+        ci: {
+          ...pushStatus,
+          mustFixVersion: result.mustFixVersion,
+          needTag: result.needTag,
+          needPullRequest: isOpenedPR,
+        },
         decision: makeDecision(ctx, pushStatus.isPushed),
       };
     }
     const fixedStatus = result.mustFixVersion ? await this.gitOps.commitVersionCorrection(ctx.branch, version) : {};
-    const changelog = await this.genChangelog(ctx.branch, ctx.isTag, version, dryRun);
+    const changelog = await this.genChangelog(ctx.branch, version, ctx.isTag, ctx.basePrBranch, dryRun);
     const commitStatus = mergeCommitStatus(<CommitStatus>fixedStatus, changelog);
     const pushStatus = await this.gitOps.pushCommit(commitStatus, dryRun);
-    const isOpenedPR = await this.createReleasePR(ctx.defaultBranch, ctx.branch, result.needPullRequest, tag, dryRun);
+    const isOpenedPR = result.needPullRequest &&
+                       await this.createPullRequest(ctx.defaultBranch, ctx.branch, { title: `Release ${tag}` }, dryRun);
     return {
       ...ctx, version, versions: result.versions,
       ci: { ...pushStatus, mustFixVersion: result.mustFixVersion, needPullRequest: isOpenedPR, changelog },
@@ -114,10 +126,7 @@ export class ProjectOps {
     };
   }
 
-  private async createReleasePR(base: string, head: string, needPR: boolean, tag: string, dryRun: boolean) {
-    if (!needPR) {
-      return needPR;
-    }
+  private async createPullRequest(base: string, head: string, content: PullRequestContent, dryRun: boolean) {
     return core.group(`[GitHub] Opening a Pull Request from ${head} into ${base}...`, async () => {
       const parameters = { base, head };
       const isAvailable = await isPullRequestAvailable(parameters);
@@ -128,7 +137,7 @@ export class ProjectOps {
         if (isEmpty(token)) {
           core.warning(`[GitHub] GitHub token is required to able to create new Pull Request.`);
         } else {
-          const url = await openPullRequest({ ...parameters, token }, `Release ${tag}`);
+          const url = await openPullRequest({ ...parameters, token }, content);
           core.info(`[GitHub] New Pull request: ${url}`);
         }
       }
@@ -136,11 +145,12 @@ export class ProjectOps {
     });
   }
 
-  private async genChangelog(branch: string, isTag: boolean, version: string, dry: boolean): Promise<ChangelogResult> {
+  private async genChangelog(branch: string, version: string, isTag: boolean, releaseBranch: string | undefined,
+    dryRun: boolean): Promise<ChangelogResult> {
     const tagPrefix = this.projectConfig.gitParserConfig.tagPrefix;
-    const latestTag = await GitOps.getLatestTag(tagPrefix);
+    const sinceTag = await GitOps.getTags(tagPrefix).then(versions => findPreviousVersion(version, versions));
     const releaseTag = tagPrefix + version;
-    const result = await this.changelogOps.generate(latestTag, releaseTag, dry);
+    const result = await this.changelogOps.generate(sinceTag, releaseTag, releaseBranch, dryRun);
     if (result.generated) {
       if (isTag) {
         throw `Changelog [${releaseTag}] is missing in tag`;
@@ -149,5 +159,6 @@ export class ProjectOps {
     }
     return { ...result, isCommitted: false };
   }
+
 }
 

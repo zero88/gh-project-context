@@ -21,10 +21,10 @@ export class ReleaseVersionOps {
     return core.group(`[Version] Fixing release version in project manifest...`, async () => this.doFix(ctx, dryRun));
   }
 
-  async upgrade(ctx: RuntimeContext, shouldBumpVersion: boolean, dryRun: boolean): Promise<UpgradeResult> {
+  async upgrade(ctx: RuntimeContext, dryRun: boolean): Promise<UpgradeResult> {
     const current: string = await core.group(`[Version] Evaluating version in project manifest...`,
       async () => this.searchVersion(ctx.branch));
-    if (!shouldBumpVersion) {
+    if (!ctx.onDefaultBranch || !ctx.isAfterMergedReleasePR) {
       return { needUpgrade: false, versions: { ...ctx.versions, current } };
     }
     return core.group(`[Version] Upgrading next version...`, async () => this.doUpgrade(ctx.versions, current, dryRun));

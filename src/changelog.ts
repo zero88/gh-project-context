@@ -4,7 +4,7 @@ import { replaceInFile } from 'replace-in-file';
 import { DockerRunCLI } from './docker';
 import { RUNNER_ENV } from './githubRunner';
 import { CommitStatus } from './gitOps';
-import { isEmpty, RegexUtils, removeEmptyProperties } from './utils';
+import { isEmpty, isNotEmpty, RegexUtils, removeEmptyProperties } from './utils';
 
 export interface ChangelogConfig {
   /**
@@ -37,7 +37,7 @@ export interface ChangelogConfig {
 
 export interface GeneratedResult {
   readonly generated: boolean;
-  readonly latestTag: string;
+  readonly sinceTag: string;
   readonly releaseTag: string;
   readonly commitMsg?: string;
 }
@@ -66,31 +66,33 @@ export class ChangelogOps {
     this.config = config;
   }
 
-  async generate(latestTag: string, releaseTag: string, dryRun: boolean): Promise<GeneratedResult> {
+  async generate(sinceTag: string, releaseTag: string, releaseBranch: string | undefined,
+    dryRun: boolean): Promise<GeneratedResult> {
     if (!this.config.active) {
-      return { latestTag, releaseTag, generated: false };
+      return { sinceTag, releaseTag, generated: false };
     }
-    return core.group(`[CHANGELOG] Generating CHANGELOG ${releaseTag}...`, async () => {
+    return core.group(`[CHANGELOG] Generating CHANGELOG ${releaseTag} since ${sinceTag}...`, async () => {
       const { workspace, apiUrl, webUrl, owner, repo } = RUNNER_ENV;
       const isExisted = await this.verifyExists(workspace, releaseTag);
       if (isExisted) {
         core.info(`[CHANGELOG] ${releaseTag} changelog is existed. Skip to generate CHANGELOG.`);
-        return { latestTag, releaseTag, generated: false };
+        return { sinceTag, releaseTag, generated: false };
       }
       const commitMsg = `${this.config.commitMsg} ${releaseTag}`;
       const cmd = [
         `--user`, owner,
         `--project`, repo,
         `--config-file`, this.config.configFile,
-        `--since-tag`, latestTag,
+        `--since-tag`, sinceTag,
         `--future-release`, releaseTag,
         `--github-api`, apiUrl,
         `--github-site`, webUrl,
       ];
+      if (isNotEmpty(releaseBranch)) cmd.push(`--release-branch`, releaseBranch!);
       const envs = { 'CHANGELOG_GITHUB_TOKEN': this.config.token };
       const volumes = { [workspace]: DockerRunCLI.DEFAULT_WORKDIR };
       const dockerRun = await DockerRunCLI.execute(this.config.image, cmd, envs, volumes);
-      return { latestTag, releaseTag, commitMsg, generated: dockerRun.success };
+      return { sinceTag, releaseTag, commitMsg, generated: dockerRun.success };
     });
   }
 

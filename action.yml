@@ -12,6 +12,10 @@ inputs:
     description: 'Git Tag Prefix'
     required: false
     default: 'v'
+  hotfixPrefix:
+    description: 'Git Hotfix Prefix'
+    required: false
+    default: 'hotfix/'
   releaseBranchPrefix:
     description: 'Git Release Branch Prefix'
     required: false
