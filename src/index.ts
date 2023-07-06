@@ -55,7 +55,7 @@ const loadConfig: () => { dryRun: boolean; ops: ProjectOps } = () => {
     getInputString('nextVerMsg'));
   const changelogConfig = createChangelogConfig(
     getInputBool('changelog', false),
-    getInputString('changelogImageTag', false),
+    getInputString('changelogImage', false),
     getInputString('changelogConfigFile', false),
     emptyOrElse(getInputString('changelogToken', false), token),
     getInputString('changelogMsg', false));

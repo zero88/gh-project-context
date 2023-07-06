@@ -6,6 +6,9 @@ export interface RuntimeVersion {
 }
 
 export interface RuntimeContext {
+  /**
+   * Default branch
+   */
   readonly defaultBranch: string;
   /**
    * Current branch name or tag name
@@ -92,7 +95,9 @@ export interface RuntimeContext {
    * Base branch in pull request
    * @type {string}
    */
-  readonly basePrBranch?: string;
-
+  readonly prBaseBranch?: string;
+  /**
+   * Versions
+   */
   readonly versions: RuntimeVersion,
 }

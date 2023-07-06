@@ -26,8 +26,9 @@ on:
   create:
     branches: [ 'release/**' ] ## To create a release PR
   push:
-    branches: ## On main branch and/or all release branches (optional) 
+    branches: ## On main branch, hotfix branch and/or all release branches (optional) 
       - main
+      - hotfix/**
       - release/**
     tags: [ 'v*' ] ## Release tag version
     paths-ignore:
@@ -36,7 +37,9 @@ on:
       - 'LICENSE'
   pull_request:
     types: [ opened, synchronize, reopened, closed ]
-    branches: [ main ]
+    branches:
+      - main
+      - hotfix/**
     paths-ignore:
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/*.yml'
@@ -50,6 +53,7 @@ More detailed at [GitHub docs](https://docs.github.com/en/actions/using-workflow
 You can use this action in 2 ways:
 
 1. Add it as first `job` in your `workflow`
+
   ```yaml
   jobs:
     context:
@@ -68,7 +72,7 @@ You can use this action in 2 ways:
         - name: Project context
           id: context
           uses: zero88/gh-project-context@v1
-  
+
     build:
       runs-on: ubuntu-latest
       needs: context
@@ -151,26 +155,32 @@ Action Output
 
 ### Input
 
-| Name                  | Description                                                                                                   | Required | Default value                                     |
-|-----------------------|---------------------------------------------------------------------------------------------------------------|----------|---------------------------------------------------|
-| defaultBranch         | Project default branch                                                                                        | false    | `main`                                            |
-| tagPrefix             | Tag Prefix                                                                                                    | false    | `v`                                               |
-| releaseBranchPrefix   | Git Release Branch Prefix                                                                                     | false    | `release/`                                        |
-| mergedReleaseMsgRegex | Merged release message regex                                                                                  | false    | `^Merge pull request #[0-9]+ from .+/release/.+$` |
-| patterns              | The patterns to search/replace a version.<br>E.g: `<glob_pattern_with_ext>::<regex_group>::<version_regex>`   | false    | See [below](#default-pattern-input)               |
-| shaLength             | Create output short commit id within length                                                                   | false    | `7`                                               |
-| allowCommit           | CI: Allow git commit to fix version if not match                                                              | false    | `true`                                            |
-| allowTag              | CI: Allow git tag if merged release branch                                                                    | false    | `true`                                            |
-| userName              | CI: Username to commit                                                                                        | false    | `ci-bot`                                          |
-| userEmail             | CI: User email to commit                                                                                      | false    | `actions@github.com`                              |
-| mustSign              | CI: Required GPG sign when git commit/tag                                                                     | false    | `false`                                           |
-| prefixCiMsg           | CI: Prefix bot message                                                                                        | false    | `<ci-auto-commit>`                                |
-| correctVerMsg         | CI: Correct version message template                                                                          | false    | `Correct version`                                 |
-| releaseVerMsg         | CI: Release version message template                                                                          | false    | `Release version`                                 |
-| nextVerMsg            | CI: Next version message template                                                                             | false    | `Next version`                                    |
-| nextVerMode           | CI: Next version mode to choose for upgrading version after merged release PR. One of: MAJOR,MINOR,PATCH,NONE | false    | `NONE`                                            |
-| token                 | CI: GitHub token to create a new Release Pull Request                                                         | false    | ``                                                |
-| dry                   | CI: Dry run. If `true`, action will run without do modify files or git push or git tag                        | false    | `false`                                           |
+| Name                  | Description                                                                                                                | Required | Default value                                                |
+|-----------------------|----------------------------------------------------------------------------------------------------------------------------|----------|--------------------------------------------------------------|
+| defaultBranch         | Project default branch                                                                                                     | false    | `main`                                                       |
+| tagPrefix             | Tag Prefix                                                                                                                 | false    | `v`                                                          |
+| releaseBranchPrefix   | Git Release Branch Prefix                                                                                                  | false    | `release/`                                                   |
+| hotfixPrefix          | Git Hotfix Prefix                                                                                                          | false    | `hotfix/`                                                    |
+| mergedReleaseMsgRegex | Merged release message regex                                                                                               | false    | `^Merge pull request #[0-9]+ from .+/release/.+$`            |
+| patterns              | The patterns to search/replace a version.<br>E.g: `<glob_pattern_with_ext>::<regex_group>::<version_regex>`                | false    | See [below](#default-pattern-input)                          |
+| shaLength             | Create output short commit id within length                                                                                | false    | `7`                                                          |
+| allowCommit           | CI: Allow git commit to fix version if not match                                                                           | false    | `true`                                                       |
+| allowTag              | CI: Allow git tag if merged release branch                                                                                 | false    | `true`                                                       |
+| userName              | CI: Username to commit                                                                                                     | false    | `ci-bot`                                                     |
+| userEmail             | CI: User email to commit                                                                                                   | false    | `actions@github.com`                                         |
+| mustSign              | CI: Required GPG sign when git commit/tag                                                                                  | false    | `false`                                                      |
+| prefixCiMsg           | CI: Prefix bot message                                                                                                     | false    | `<ci-auto-commit>`                                           |
+| correctVerMsg         | CI: Correct version message template                                                                                       | false    | `Correct version`                                            |
+| releaseVerMsg         | CI: Release version message template                                                                                       | false    | `Release version`                                            |
+| nextVerMsg            | CI: Next version message template                                                                                          | false    | `Next version`                                               |
+| nextVerMode           | CI: Next version mode to choose for upgrading version after merged release PR. One of: MAJOR,MINOR,PATCH,NONE              | false    | `NONE`                                                       |
+| token                 | CI: GitHub token to create a new Release Pull Request                                                                      | false    | ``                                                           |
+| dry                   | CI: Dry run. If `true`, action will run without do modify files or git push or git tag                                     | false    | `false`                                                      |
+| changelog             | Enable generate CHANGELOG                                                                                                  | false    | `false`                                                      |
+| changelogImage        | CHANGELOG docker image tag: https://github.com/github-changelog-generator/docker-github-changelog-generator                | false    | `githubchangeloggenerator/github-changelog-generator:1.16.2` |
+| changelogConfigFile   | CHANGELOG config file: https://github.com/github-changelog-generator/github-changelog-generator#params-file                | false    | `.github_changelog_generator`                                |
+| changelogToken        | CHANGELOG token to query GitHub API: https://github.com/github-changelog-generator/github-changelog-generator#github-token | false    |                                                              |
+| changelogMsg          | CI: Changelog generator commit message template                                                                            | false    | `Generated CHANGELOG`                                        |
 
 #### Default Pattern Input
 
@@ -186,32 +196,46 @@ package?(-lock).json::("version"\s?:\s?)(")([^"]+)(")::2
 
 Project context based on current `GitHub event`
 
-| Name                   | Description                                                                                                                                                      |
-|------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| branch                 | Current branch name or tag name                                                                                                                                  |
-| onDefaultBranch        | Check whether current event is on default branch or not                                                                                                          |
-| isPR                   | Check whether current event is on pull request or not                                                                                                            |
-| isReleaseBranch        | Check whether current event is on release branch or not                                                                                                          |
-| isReleasePR            | Check whether current event is on release pull request or not                                                                                                    |
-| isMerged               | Check whether current event is merged PR                                                                                                                         |
-| isClosed               | Check whether current event is close PR but not merged into target branch                                                                                        |
-| isAfterMergedReleasePR | Check whether current event is a merged commit after merged release pull request into default branch or not                                                      |
-| isTag                  | Check whether current event is on ref tag                                                                                                                        |
-| commitMsg              | The latest commit message                                                                                                                                        |
-| commitId               | The latest commit id                                                                                                                                             |
-| shortCommitId          | The latest short commit id                                                                                                                                       |
-| version                | Current tag version or release version                                                                                                                           |
-| ci_mustFixVersion      | CI: Need to fix version to match with release name                                                                                                               |
-| ci_needTag             | CI: Need to tag new version if release branch is merged                                                                                                          |
-| ci_isPushed            | CI: Check whether if auto commit is pushed to remote                                                                                                             |
-| ci_commitId            | CI: auto commit id                                                                                                                                               |
-| ci_commitMsg           | CI: auto commit message                                                                                                                                          |
-| decision_build         | Decision: Should run the next step: such as build & test. Default value: `!ci.isPushed && !isClosed && !isMerged && !isAfterMergedReleasePR && !isReleaseBranch` |
-| decision_publish       | Should publish artifact: such as push artifact to any registry. Default value: `decision.build and (onDefaultBranch or isTag)`                                   |
-| ver_current            | Current version in config file                                                                                                                                   |
-| ver_nextMajor          | Suggest next major version if after release and `ver_current` is compatible with semver                                                                          |
-| ver_nextMinor          | Suggest next minor version if after release and `ver_current` is compatible with semver                                                                          |
-| ver_nextPatch          | Suggest next patch version if after release and `ver_current` is compatible with semver                                                                          |
+| Name                     | Description                                                                                                                                                                                      |
+|--------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| branch                   | Current branch name or tag name                                                                                                                                                                  |
+| onDefaultBranch          | Check whether current event is on default branch or not                                                                                                                                          |
+| isBranch                 | Check whether current event is on branch or not                                                                                                                                                  |
+| isPR                     | Check whether current event is on pull request or not                                                                                                                                            |
+| isTag                    | Check whether current event is on ref tag                                                                                                                                                        |
+| isSchedule               | Check whether current event is by schedule or not                                                                                                                                                |
+| isDispatch               | Check whether current event is by manual or dispatch from another workflow or event from repository                                                                                              |
+| isRelease                | Check whether current event is release event on regardless of branch, pull-request or tag                                                                                                        |
+| isHotfix                 | Check whether current event is hotfix event on regardless of branch, pull-request or tag                                                                                                         |
+| isAfterMergedReleasePR   | Check whether current event is a merged commit after merged release pull request into default branch or not                                                                                      |
+| isMerged                 | Check whether current event is merged PR                                                                                                                                                         |
+| isClosed                 | Check whether current event is close PR but not merged into target branch                                                                                                                        |
+| isOpened                 | Check whether current event is open PR or create branch                                                                                                                                          |
+| prBaseBranch             | Base branch in pull request                                                                                                                                                                      |
+| commitMsg                | The latest commit message                                                                                                                                                                        |
+| commitId                 | The latest commit id                                                                                                                                                                             |
+| commitShortId            | The latest short commit id                                                                                                                                                                       |
+| version                  | Current tag version or release version                                                                                                                                                           |
+| ci_mustFixVersion        | CI: Need to fix version to match with release name                                                                                                                                               |
+| ci_needPullRequest       | CI: Need to open new pull request for release or merge hotfix into default branch                                                                                                                |
+| ci_needTag               | CI: Need to tag new version if release branch is merged                                                                                                                                          |
+| ci_needUpgrade           | CI: Need to upgrade next version after release branch is merged into default branch                                                                                                              |
+| ci_isPushed              | CI: Check whether if auto commit is pushed to remote                                                                                                                                             |
+| ci_commitId              | CI: auto commit id                                                                                                                                                                               |
+| ci_commitMsg             | CI: auto commit message                                                                                                                                                                          |
+| ci_changelog_generated   | CI: changelog is generated                                                                                                                                                                       |
+| ci_changelog_releaseTag  | CI: changelog generated for release tag                                                                                                                                                          |
+| ci_changelog_sinceTag    | CI: changelog generated since tag                                                                                                                                                                |
+| ci_changelog_isCommitted | CI: changelog is committed                                                                                                                                                                       |
+| ci_changelog_commitId    | CI: changelog auto commit id                                                                                                                                                                     |
+| ci_changelog_commitMsg   | CI: changelog auto commit message                                                                                                                                                                |
+| decision_build           | Decision: Should run the next step: such as build & test. <br/>Default value: `!(ciPushed \|\| isClosed \|\| isMerged \|\| (isBranch && (isRelease \|\| isOpened)) \|\| isAfterMergedReleasePR)` |
+| decision_publish         | Should publish artifact: such as push artifact to any registry. <br/>Default value: `decision.build && (onDefaultBranch \|\| (isRelease && isTag))`                                              |
+| ver_current              | Current version in config file                                                                                                                                                                   |
+| ver_bumped               | Bumped version                                                                                                                                                                                   |
+| ver_nextMajor            | Suggest next major version if after release and `ver_current` is compatible with semver                                                                                                          |
+| ver_nextMinor            | Suggest next minor version if after release and `ver_current` is compatible with semver                                                                                                          |
+| ver_nextPatch            | Suggest next patch version if after release and `ver_current` is compatible with semver                                                                                                          |
 
 ## Note
 

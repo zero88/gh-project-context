@@ -50,15 +50,15 @@ export class ReleaseVersionOps {
       core.info('[Version] None strategy to upgrade version. Skip to upgrade version.');
       return { needUpgrade: false, versions };
     }
-    if (isEmpty(nextVersion.bumpedVersion)) {
+    if (isEmpty(nextVersion.bumped)) {
       core.warning('[Version] Unknown next version. Skip to upgrade version.');
       return { needUpgrade: false, versions };
     }
-    if (nextVersion.bumpedVersion === versions.current) {
+    if (nextVersion.bumped === versions.current) {
       core.info('[Version] Current version and next version are same. Skip to upgrade version.');
       return { needUpgrade: false, versions };
     }
-    const vr = await this.fixVersion(nextVersion.bumpedVersion!, dryRun);
+    const vr = await this.fixVersion(nextVersion.bumped!, dryRun);
     return { needUpgrade: vr.isChanged, versions };
   }
 

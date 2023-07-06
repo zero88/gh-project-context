@@ -76,7 +76,7 @@ export class ProjectOps {
 
   private async buildContextOnAnotherBranch(ctx: RuntimeContext, dryRun: boolean): Promise<ProjectContext> {
     const result = await this.versionOps.upgrade(ctx, dryRun);
-    const pushStatus = await this.commitPushNext(ctx.branch, result.needUpgrade, result.versions.bumpedVersion, dryRun);
+    const pushStatus = await this.commitPushNext(ctx.branch, result.needUpgrade, result.versions.bumped, dryRun);
     return {
       ...ctx, version: result.versions.current, versions: result.versions,
       ci: { ...pushStatus, needUpgrade: result.needUpgrade },
@@ -98,9 +98,9 @@ export class ProjectOps {
     if (result.needTag) {
       const pushStatus = await this.gitOps.tag(tag).then(s => this.gitOps.pushTag(tag, s, dryRun));
       const isOpenedPR = ctx.isHotfix &&
-                         await this.createPullRequest(ctx.defaultBranch, ctx.basePrBranch!, {
+                         await this.createPullRequest(ctx.defaultBranch, ctx.prBaseBranch!, {
                            title: `Apply hotfix ${tag} patch`,
-                           body: `:warning: Action required: need to merge or rebase from ${ctx.defaultBranch} into ${ctx.basePrBranch} :warning:`,
+                           body: `:warning: Action required: need to merge or rebase from ${ctx.defaultBranch} into ${ctx.prBaseBranch} :warning:`,
                          }, dryRun);
       return {
         ...ctx, version, versions: result.versions,
@@ -114,7 +114,7 @@ export class ProjectOps {
       };
     }
     const fixedStatus = result.mustFixVersion ? await this.gitOps.commitVersionCorrection(ctx.branch, version) : {};
-    const changelog = await this.genChangelog(ctx.branch, version, ctx.isTag, ctx.basePrBranch, dryRun);
+    const changelog = await this.genChangelog(ctx.branch, version, ctx.isTag, ctx.prBaseBranch, dryRun);
     const commitStatus = mergeCommitStatus(<CommitStatus>fixedStatus, changelog);
     const pushStatus = await this.gitOps.pushCommit(commitStatus, dryRun);
     const isOpenedPR = result.needPullRequest &&

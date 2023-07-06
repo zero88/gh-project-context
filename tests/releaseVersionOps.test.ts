@@ -62,7 +62,7 @@ const expectedOnPushAfterMergeReleasePR: UpgradeResult = {
     nextMajor: '1.0.0',
     nextMinor: '0.2.0',
     nextPath: '0.1.1',
-    bumpedVersion: '0.2.0',
+    bumped: '0.2.0',
   },
 };
 const expectedOnPushHotfixAfterMergeReleasePR: UpgradeResult = {

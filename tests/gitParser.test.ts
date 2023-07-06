@@ -61,7 +61,7 @@ const expectedOnPushedOnDefault: RuntimeContext = {
 
 const expectedOnOpenedNormalPR: Partial<RuntimeContext> = {
   branch: 'octocat-patch-1',
-  basePrBranch: 'main',
+  prBaseBranch: 'main',
   commitId: '7f028a79fe6be749688bea353ebddebca2c893be',
   commitShortId: '7f028a7',
   defaultBranch: 'main',
@@ -106,7 +106,7 @@ const expectedOnOpenedBranch: Partial<RuntimeContext> = {
 
 const expectedOnMergedNormalPR: Partial<RuntimeContext> = {
   branch: 'octocat-patch-1',
-  basePrBranch: 'main',
+  prBaseBranch: 'main',
   commitId: '7321f38bfa2a36649f6d38012b28166653588f93',
   commitShortId: '7321f38',
   commitMsg: undefined,
@@ -176,7 +176,7 @@ const expectedOnOpenedReleaseBranch: Partial<RuntimeContext> = {
 
 const expectedOnClosedReleasePR: Partial<RuntimeContext> = {
   branch: 'release/1.0.0',
-  basePrBranch: 'main',
+  prBaseBranch: 'main',
   commitId: '956a75767722d596de58fa277cce281529c5272d',
   commitShortId: '956a757',
   commitMsg: undefined,
@@ -200,7 +200,7 @@ const expectedOnClosedReleasePR: Partial<RuntimeContext> = {
 
 const expectedOnOpenedReleasePR: Partial<RuntimeContext> = {
   branch: 'release/1.0.6',
-  basePrBranch: 'main',
+  prBaseBranch: 'main',
   commitId: '99064653320ede50bd20437dd4c61d5719ca12f4',
   commitShortId: '9906465',
   commitMsg: undefined,
@@ -224,7 +224,7 @@ const expectedOnOpenedReleasePR: Partial<RuntimeContext> = {
 
 const expectedOnMergedReleasePR: Partial<RuntimeContext> = {
   branch: 'release/1.0.6',
-  basePrBranch: 'main',
+  prBaseBranch: 'main',
   commitId: '1584df028b7f4c1d87327da577c2d465f147134f',
   commitShortId: '1584df0',
   commitMsg: undefined,
@@ -334,7 +334,7 @@ const expectedOnOpenedHotfixFixedBranch: Partial<RuntimeContext> = {
 };
 const expectedOnPushedHotfixPR: Partial<RuntimeContext> = {
   branch: 'hotfix/bugfix/fix-issue1',
-  basePrBranch: 'hotfix/1.0.17',
+  prBaseBranch: 'hotfix/1.0.17',
   commitId: 'a3e6a82a164c3f91f5c54a279eb4b48b8de99d8a',
   commitShortId: 'a3e6a82',
   defaultBranch: 'main',
@@ -356,7 +356,7 @@ const expectedOnPushedHotfixPR: Partial<RuntimeContext> = {
 };
 const expectedOnMergedHotfixPR: Partial<RuntimeContext> = {
   branch: 'hotfix/bugfix/fix-issue1',
-  basePrBranch: 'hotfix/1.0.17',
+  prBaseBranch: 'hotfix/1.0.17',
   commitId: 'a8eedc40ef4f6058f6b4bb6cc2ef4b649a1e9638',
   commitShortId: 'a8eedc4',
   defaultBranch: 'main',
@@ -399,7 +399,7 @@ const expectedOnOpenedHotfixReleaseBranch: Partial<RuntimeContext> = {
 };
 const expectedOnOpenedHotfixReleasePR: Partial<RuntimeContext> = {
   branch: 'release/hotfix/1.0.17',
-  basePrBranch: 'hotfix/1.0.17',
+  prBaseBranch: 'hotfix/1.0.17',
   commitId: 'eb42830f8a6aeb6bb3ff30632db01cb69b05f292',
   commitShortId: 'eb42830',
   defaultBranch: 'main',
