@@ -62,16 +62,16 @@ You can use this action in 2 ways:
         branch: ${{ steps.context.outputs.branch }}
         shouldBuild: ${{ steps.context.outputs.decision_build }}
         shouldPublish: ${{ steps.context.outputs.decision_publish }}
-        isRelease: ${{ steps.context.outputs.isTag }}
+        isRelease: ${{ steps.context.outputs.isTag && steps.context.outputs.isRelease }}
         version: ${{ steps.context.outputs.version }}
-        commitId: ${{ steps.context.outputs.shortCommitId }}
+        commitId: ${{ steps.context.outputs.commitShortId }}
         semanticVersion: ${{ steps.semantic.outputs.semanticVersion }}
 
       steps:
-        - uses: actions/checkout@v2
+        - uses: actions/checkout@v3
         - name: Project context
           id: context
-          uses: zero88/gh-project-context@v1
+          uses: zero88/gh-project-context@v2
 
     build:
       runs-on: ubuntu-latest
@@ -131,20 +131,23 @@ CI decision
 Action Output
   {
     "branch": "main",
-    "ci_isPushed": false,
-    "commitId": "c1c69ba9f41eeffaf260b7a6174fc37493c8fb42",
-    "commitMsg": "chore: bump to next version",
-    "decision_build": true,
-    "decision_publish": true,
+    "onDefaultBranch": true,
+    "isBranch": true,
+    "isPR": false,
+    "isTag": false,
+    "isSchedule": false,
+    "isDispatch": false,
     "isAfterMergedReleasePR": false,
     "isClosed": false,
-    "isManualOrSchedule": false,
     "isMerged": false,
-    "isPR": false,
-    "isReleasePR": false,
-    "isTag": false,
-    "onDefaultBranch": true,
-    "shortCommitId": "c1c69ba",
+    "isOpened": false,
+    "isRelease": false,
+    "commitId": "c1c69ba9f41eeffaf260b7a6174fc37493c8fb42",
+    "commitMsg": "chore: bump to next version",
+    "commitShortId": "c1c69ba",
+    "ci_isPushed": false,
+    "decision_build": true,
+    "decision_publish": true,
     "version": "0.0.3",
     "versions_branch": "main",
     "versions_current": "0.0.3"
@@ -249,7 +252,7 @@ message in `pull-request`, need to tweak your build as below:
   with:
     token: ${{ secrets.YOUR_GITHUB_TOKEN }}
     fetch-depth: 2
-- uses: zero88/gh-project-context@v1.1
+- uses: zero88/gh-project-context@v2
 ```
 
 ## Use Cases
