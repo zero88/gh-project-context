@@ -108,6 +108,8 @@ outputs:
     description: 'Current branch name or tag name'
   onDefaultBranch:
     description: 'Check whether current event is on default branch or not'
+  onRelease:
+    description: 'Check whether current event is on default branch or not'
   isBranch:
     description: 'Check whether current event is on branch or not'
   isPR:

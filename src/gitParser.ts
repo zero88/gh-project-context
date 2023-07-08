@@ -135,8 +135,9 @@ export class GitParser {
     const commitId = getCommitId(ghContext, isPR, !isMerged);
     const commitShortId = getShortCommitId(commitId, this.config.shaLength);
     const prBaseBranch = getPrBaseBranch(ghContext, isPR);
+    const onRelease = isRelease && isTag;
     return {
-      branch, defaultBranch, onDefaultBranch, prBaseBranch,
+      branch, defaultBranch, onDefaultBranch, onRelease, prBaseBranch,
       isSchedule, isDispatch, isBranch, isPR, isTag,
       isHotfix, isRelease, isAfterMergedReleasePR, isMerged, isClosed, isOpened,
       commitMsg, commitId, commitShortId, versions,

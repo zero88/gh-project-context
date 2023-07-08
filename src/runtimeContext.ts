@@ -20,6 +20,11 @@ export interface RuntimeContext {
    */
   readonly onDefaultBranch: boolean;
   /**
+   * Check whether current event is on release or not, that means `isRelease && isTag`
+   * @type {boolean}
+   */
+  readonly onRelease: boolean;
+  /**
    * Check whether current event is on branch or not
    * @type {boolean}
    */
