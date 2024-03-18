@@ -187,5 +187,5 @@ outputs:
   ver_nextPatch:
     description: 'Suggest next patch version if after release and ver_current is compatible with semver'
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'dist/index.js'
