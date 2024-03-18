@@ -10,7 +10,7 @@ on:
       - '**.md'
 
 env:
-  NODE_VERSION: 16
+  NODE_VERSION: 20
 
 jobs:
   build:
@@ -18,11 +18,11 @@ jobs:
     if: github.event.action != 'closed'
     steps:
       - name: Install Node.js
-        uses: actions/setup-node@v4.0.0
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - uses: actions/checkout@v4.1.1
+      - uses: actions/checkout@v4
 
       - name: YARN install
         run: yarn install
